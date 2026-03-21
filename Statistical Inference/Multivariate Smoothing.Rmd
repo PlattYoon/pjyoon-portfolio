@@ -1,0 +1,477 @@
+---
+title: "36-402 Homework 7"
+author: "Platt Yoon"
+subtitle: Due Tuesday, March 19th by 5:59pm
+output:
+  pdf_document: default
+  html_document:
+    df_print: paged
+urlcolor: blue
+---
+
+# Question 1
+
+```{r,echo=FALSE}
+n90_pol <- read.csv("n90_pol.csv")
+n90_pol$conservative <- ifelse(n90_pol$orientation <= 2, 1, 0)
+```
+
+
+## part a 
+
+The cut off was put at an orientation score of 2 because the original scale ranges from 1 to 5 where 1 is very conservative and 5 is very liberal. Therefore we use two groupings where we group respondents on the conservative end of the scale(1 or 2) and the rest. This makes sense substantially because it separates people who identify as clearly conservative from moderates and liberals. It is also a sensible cutoff since orientation is ordinal rather than truly numeric and therefore the goal is not to preserve the distances between scores but to create a meaningful binary distinction between conservative and non-conservative. In this data set specifically since there are no 1s so using smaller or equal to 2 effectively makes the conservative group the people who answered 2, while the rest form the non-conservative group.
+
+# Question 2
+
+## part a
+
+```{r,echo=FALSE}
+library(knitr)
+m_logit <- glm(conservative ~ amygdala + acc,
+               data = n90_pol,
+               family = binomial)
+coef_summary <- summary(m_logit)$coefficients
+coef_df <- data.frame(
+  Term = rownames(coef_summary),
+  Estimate = round(coef_summary[, "Estimate"], 2),
+  Std.Error = round(coef_summary[, "Std. Error"], 3)
+)
+kable(coef_df, caption = "Logistic Regression Coefficients")
+```
+
+
+## part b
+
+```{r,error=FALSE,warning=FALSE, echo=FALSE}
+#bootstrapping code directly from chapter 6 
+rboot <- function(statistic, simulator, B) {
+  tboots <- replicate(B, statistic(simulator()))
+  if (is.null(dim(tboots))) {
+    tboots <- array(tboots, dim = c(1, B))
+  }
+  return(tboots)
+}
+
+bootstrap <- function(tboots, summarizer, ...) {
+  summaries <- apply(tboots, 1, summarizer, ...)
+  return(t(summaries))
+}
+
+bootstrap.se <- function(statistic, simulator, B) {
+  bootstrap(rboot(statistic, simulator, B), summarizer = sd)
+}
+
+equitails <- function(x, alpha) {
+  lower <- quantile(x, alpha / 2)
+  upper <- quantile(x, 1 - alpha / 2)
+  return(c(lower, upper))
+}
+
+bootstrap.ci <- function(statistic = NULL, simulator = NULL, tboots = NULL,
+                         B = if (!is.null(tboots)) { ncol(tboots) },
+                         t.hat, level) {
+  if (is.null(tboots)) {
+    tboots <- rboot(statistic, simulator, B)
+  }
+  alpha <- 1 - level
+  intervals <- bootstrap(tboots, summarizer = equitails, alpha = alpha)
+  upper <- t.hat + (t.hat - intervals[, 1])
+  lower <- t.hat + (t.hat - intervals[, 2])
+  CIs <- cbind(lower = lower, upper = upper)
+  return(CIs)
+}
+
+resample <- function(x) {
+  sample(x, size = length(x), replace = TRUE)
+}
+
+resample.data.frame <- function(data) {
+  sample.rows <- resample(1:nrow(data))
+  return(data[sample.rows, ])
+}
+
+t_hat <- coef(m_logit)
+
+#takes a dataset as an input fits logistic regression model on that dataset and returns the coefficients
+logit.stat <- function(data) {
+  coef(glm(conservative ~ amygdala + acc,
+           data = data,
+           family = binomial))
+}
+#takes a dataset and resamples rows with replacement and returns a new dataset of the same size.
+
+logit.sim <- function() {
+  resample.data.frame(n90_pol)
+}
+
+B <- 20000
+
+boot_se <- bootstrap.se(logit.stat, logit.sim, B)
+boot_ci <- bootstrap.ci(statistic = logit.stat,
+                        simulator = logit.sim,
+                        B = B,
+                        t.hat = t_hat,
+                        level = 0.95)
+coef_summary <- summary(m_logit)$coefficients
+
+boot_df <- data.frame(
+  Term = names(t_hat),
+  Estimate = round(t_hat, 3),
+  Boot_SE = round(as.numeric(boot_se), 3),
+  CI_Lower = round(boot_ci[, "lower"], 3),
+  CI_Upper = round(boot_ci[, "upper"], 3)
+)
+kable(boot_df, caption = "Logistic Regression Estimates with Bootstrap SEs and 95% CIs")
+
+```
+Based on the output we can see that the confidence intervals are very wide indicating a great uncertainty in the coefficients and in light of this the restriction of three digits does not remove any actual information. The bootstrap standard error for the coefficients are extremely large and thus there isn't much difference between rounding to the third significant digit or R's default.
+
+
+# Question 3
+```{r,echo=FALSE,message=FALSE}
+library(mgcv)
+m_gam <- gam(conservative ~ s(amygdala) + s(acc),
+             data = n90_pol,
+             family = binomial)
+intercept <- coef(m_gam)[1]
+intercept_df <- data.frame(
+  Term = "(Intercept)",
+  Estimate = round(intercept, 3)
+)
+
+kable(intercept_df, caption = "GAM Intercept Estimate")
+
+par(mfrow = c(1,2))
+
+plot(m_gam,
+     se = TRUE,
+     shade = FALSE,
+     main = "GAM Smooth Effects")
+```
+For amygdala, the smooth function is approximately linear and increasing, indicating that larger amygdala values are associated with higher log-odds of being conservative. However, the confidence bands cross around the middle of the range(0,0), suggesting that the effect is uncertain in that region and may not be statistically distinguishable from zero there.
+
+For ACC, the relationship is nonlinear and as the effect decreases as ACC increases, becomes negative over much of the range plateauing around 0.02. The confidence bands do not cross each other, but they become much wider at the extreme values, indicating greater uncertainty where there are fewer observations. This suggests that while there is some evidence of a negative association between ACC and the log-odds of being conservative up to a certain point, the effect is estimated less precisely at the extremes.
+
+
+
+# Question 4
+
+## part a 
+
+```{r,echo=FALSE}
+m_gam_int <- gam(conservative ~ ti(amygdala) + ti(acc) + ti(amygdala, acc),
+                 data = n90_pol,
+                 family = binomial)
+intercept <- coef(m_gam_int)[1]
+intercept_df <- data.frame(
+  Term = "(Intercept)",
+  Estimate = round(intercept, 3)
+)
+#p <- 1 / (1 + exp(-intercept))
+#p
+
+kable(intercept_df, caption = "GAM (with Interaction) Intercept")
+
+plot(m_gam_int, select = 1, se = TRUE, shade = FALSE)
+plot(m_gam_int, select = 2, se = TRUE, shade = FALSE)
+plot(m_gam_int, select = 3, se = FALSE)
+```
+The intercept corresponds to a baseline probability of approximately 0.074, meaning that, on average, around 7.4% of subjects are predicted to be conservative when all smooth functions are equal to 0. Since the smooth functions are centered this corresponds to the average case across the dataset. 
+
+
+
+## part b
+
+The interaction term is relatively small compared to the additive terms. Although the interaction surface shows some variation across the predictor space, its magnitude is modest, suggesting that the relationship between amygdala and ACC is largely additive with only a weak interaction effect.
+
+The interaction term is relatively small compared to the additive terms. Although the interaction surface shows some variation across the predictor space, its magnitude is modest, suggesting that the relationship between amygdala and ACC is largely additive with only a weak interaction effect.
+
+# Question 5
+
+## part a 
+
+```{r,echo=FALSE}
+amygdala.seq <- seq(from = -0.07, to = 0.09, length.out = 100)
+acc.seq <- seq(from = -0.04, to = 0.06, length.out = 100)
+
+grid <- expand.grid(amygdala = amygdala.seq,
+                    acc = acc.seq)
+
+grid$prob.logit <- predict(m_logit, newdata = grid, type = "response")
+
+prob.mat <- matrix(grid$prob.logit,
+                   nrow = length(amygdala.seq),
+                   ncol = length(acc.seq))
+
+image(amygdala.seq, acc.seq, prob.mat,
+      xlab = "amygdala (cc from baseline)",
+      ylab = "acc (cc from baseline)",
+      main = "Predicted Probability of Conservatism: Logistic Regression")
+
+contour(amygdala.seq, acc.seq, prob.mat,
+        add = TRUE)
+points(n90_pol$amygdala,
+       n90_pol$acc,
+       col = ifelse(n90_pol$conservative == 1, "red", "black"),
+       pch = 16,
+       cex = 0.7)
+```
+The predicted-proabiliity plot above shows a smooth gradient with probabilities increasing as amygdala increases(as colors go from light to dark red as amygdala value increases and contour values increases with higher amygdala values) and decreasing as ACC increases(as colors go from red to yellow and contour values decrease with higher acc values.) The contour lines are straight and diagonal indicating that the log odds of being conservative are a linear function of predictors. This reflects the logistic model where the linear predictor is of the form of $\beta_0 + \beta_1 amygdala + \beta_2 acc$ and therefore contours of equal probability correspond to lines where this linear combination is constant. As shown in the plot positive coefficient values on amygdala causes probabilities to increase in the horizontal direction while the predicted probability decreases as ACC increases, which reflects the negative coefficient on ACC in the logistic regression model. 
+
+## part b
+
+```{r,echo=FALSE}
+grid$prob.gam <- predict(m_gam, newdata = grid, type = "response")
+prob.mat.gam <- matrix(grid$prob.gam,
+                       nrow = length(amygdala.seq),
+                       ncol = length(acc.seq))
+
+image(amygdala.seq, acc.seq, prob.mat.gam,
+      xlab = "amygdala(cc from baseline)",
+      ylab = "acc(cc from baseline)",
+      main = "Predicted Probability of Conservatism: GAM")
+contour(amygdala.seq, acc.seq, prob.mat.gam, add = TRUE)
+points(n90_pol$amygdala,
+       n90_pol$acc,
+       col = ifelse(n90_pol$conservative == 1, "red", "black"),
+       pch = 16,
+       cex = 0.7)
+```
+The GAM probability surface is smooth and is no longer just linear and has curved contour lines. The predicted probability generally increases as amygdala increases and decreases as ACC increases with contour spreading out(flattening) with higher values as shown with the curves of the contour values with higher acc values, consistent with the partial response functions from Q3(amygdala is roughly linear with higher values show increased log-odds and the ACC is nonlinear decreasing and flattening with higher values). In particular, the steeper grdient at lower ACC values and the flattening at higher ACC values wmatch the nonlinear decreasing pattern observed in the ACC partial response. Therefore, the shape of the surface directly reflects the additive combination of amygdala and ACC.
+
+## part c
+
+```{r,echo=FALSE}
+grid$prob.gam.int <- predict(m_gam_int, newdata = grid, type = "response")
+prob.mat.gam.int <- matrix(grid$prob.gam.int,
+                           nrow = length(amygdala.seq),
+                           ncol = length(acc.seq))
+image(amygdala.seq, acc.seq, prob.mat.gam.int,
+      xlab = "amygdala(cc from baseline)",
+      ylab = "acc(cc from baseline)",
+      main = "Predicted Probability of Conservatism: GAM with Interaction")
+contour(amygdala.seq, acc.seq, prob.mat.gam.int, add = TRUE)
+points(n90_pol$amygdala,
+       n90_pol$acc,
+       col = ifelse(n90_pol$conservative == 1, "red", "black"),
+       pch = 16,
+       cex = 0.7)
+```
+The probability surface from the GAM with interaction shows clear deviations from the additive structure from Q5b. At low values of ACC(for instance around -0.03) the contour lines are approximately horizontal and parallel, showing that changes in amygdala have little effect on the predicted probabiliity which remains high in this region. In contrast, at higher values of ACC the contour lines become more vertical, indicating that the predicted probability varies more strongly with amygdala while ACC has less to little to none influence. Moreover, there is also a noticeable bending region where amygdala is large and ACC is small `where the contour lines changes directions. This is a direct reflection of the interaction term, which allows the effect of one variable to depend on the level of the other. 
+
+This behaviour reflects the estimated functions in the model. The additive terms $f_1(amygdala)$ and $f_2(acc)$ determine the overall increasing effect of amygdala and decreasing effect of ACC as seen in question 3. The interaction term $f_12(amygdala,acc)$ modifies these effects depending on the joint values of the predictors. In specific, the interaction reduces the influence of amygdala when ACC is small and increases influence when ACC is larger shown with the horizontal contours for small ACC values and vertical contours for higher ACC values. The bending in the contour lines correspond to regions where the interaction term changes more rapidly, indicating that the joint effect of amygdala and ACC cannot be explained with just the additive terms. 
+
+## part d
+
+Across all three models, higher amygdala values are consistently associated with higher probabilities of being conservative, while ACC generally has a negative effect and the least likely to predict sconservatism are those individuals with low amygdala values and high ACC values. However, in the GAM with interaction, this relationship is no longer strictly additive. In particular, regions with both high amygdala and high ACC can also show high predicted probabilities, indicating that the interaction term allows amygdala to offset or even dominate the negative effect of ACC. As a result, the most conservative predictions are no longer confined to low ACC values.
+
+
+The brain variables make a substantial difference to the predicted probabilities, with values ranging from near zero in some regions(low amygdala and high acc) to around 0.8-0.9 in others(high amygdala values). This indicates that variation in amygdala and ACC can lead to large changes in predicted probability, although the interaction mainly alters how these effects combine rather than completely changing the overall pattern.
+
+# Question 6
+
+```{r,echo=FALSE}
+#function directly from  HW7Q6
+gam.LOO.predict <- function(df, form, family="binomial", type="response") {
+  stopifnot(require(mgcv))
+  form <- as.formula(form)
+  full.data.model <- gam(formula = form, data = df, family = family)
+  full.data.preds <- predict(full.data.model, newdata = df, type = type)
+  omit.one.point <- function(i) {
+    fit <- gam(formula = form, data = df[-i, ], family = family)
+    pred <- predict(fit, newdata = df[i, , drop = FALSE], type = type)
+    return(pred)
+  }
+  LOO.preds <- sapply(1:nrow(df), omit.one.point)
+  if (length(dim(LOO.preds)) == 2) {
+    LOO.preds <- t(LOO.preds)
+  }
+  return(cbind(full.data.preds, LOO.preds))
+}
+```
+
+
+## part a 
+
+```{r,echo=FALSE}
+q6a_preds <- gam.LOO.predict(df = n90_pol,
+                             form = conservative ~ amygdala + acc,
+                             family = "binomial",
+                             type = "response")
+
+q6a_df <- data.frame(
+  Subject = 1:nrow(n90_pol),
+  Conservative = n90_pol$conservative,
+  Full_Data_Prob = round(q6a_preds[, 1], 3),
+  LOO_Prob = round(q6a_preds[, 2], 3)
+)
+
+#kable(q6a_df, caption = "All predicted probabilities")
+
+plot(q6a_preds[, 1], q6a_preds[, 2],
+     xlim = c(0, 1),
+     ylim = c(0, 1),
+     xlab = "Full-data predicted probability",
+     ylab = "Leave-one-out predicted probability",
+     main = "Q6(a): Logistic Regression",
+     col = ifelse(n90_pol$conservative == 1, "red", "blue"),
+     pch = ifelse(n90_pol$conservative == 1, 16, 16))
+
+abline(0, 1, lty = 2)
+
+legend("topleft",
+       legend = c("Conservative", "Not conservative"),
+       col = c("red", "blue"),
+       pch = c(16, 16),
+       bty = "n")
+```
+Most of the points lie very close to the 45 degree line, indicating that the leave one out predicted probabilites are very similar to the full-data predicted proabilites. There are a few points that deviate slightly from the diagonal, particularly at higher predicted proababilites which indicates that some observations have a modest influence on the fitted model, however, since these deviations are not large, no single observation appears to have a strong effect. Moreover, conservative subjects tend to have higher predicted probabilites than non-conservative subjects although most of the points show some overlap between the two groups, reflecting that the model does not perfectly separates them. Lastly, many of the conservative observations lie slightly below the diagonal, indicating that their predicted probabilities decrease when they are left out of the model, suggesting that they have some influence on their own fitted values.
+
+## part b
+
+```{r,echo=FALSE}
+q6b_preds <- gam.LOO.predict(df = n90_pol,
+                             form = conservative ~ s(amygdala) + s(acc),
+                             family = "binomial",
+                             type = "response")
+
+plot(q6b_preds[,1], q6b_preds[,2],
+     xlim = c(0,1),
+     ylim = c(0,1),
+     xlab = "Full-data predicted probability",
+     ylab = "Leave-one-out predicted probability",
+     main = "Q6(b): Additive GAM",
+     col = ifelse(n90_pol$conservative == 1, "red", "blue"),
+     pch = ifelse(n90_pol$conservative == 1, 16, 16))
+
+abline(0,1,lty=2)
+
+legend("topleft",
+       legend = c("Conservative", "Not conservative"),
+       col = c("red", "blue"),
+       pch = c(16,16),
+       bty = "n")
+```
+Most points lie close to the 45-degree line, indicating that predictions are generally stable. Overall the graph is pretty much similar to (a) but there is more spread than in part (a), and at least one clear outlier, showing that the additive GAM is more sensitive to individual observations. Many conservative observations lie slightly below the diagonal, indicating that their predicted probabilities decrease when left out, suggesting some influence on the fitted model.
+
+
+## part c
+
+```{r,echo=FALSE}
+q6c_preds <- gam.LOO.predict(
+  df = n90_pol,
+  form = conservative ~ ti(amygdala) + ti(acc) + ti(amygdala, acc),
+  family = "binomial",
+  type = "response"
+)
+
+plot(q6c_preds[, 1], q6c_preds[, 2],
+     xlim = c(0, 1),
+     ylim = c(0, 1),
+     xlab = "Full-data predicted probability",
+     ylab = "Leave-one-out predicted probability",
+     main = "Q6(c): GAM with Interaction",
+     col = ifelse(n90_pol$conservative == 1, "red", "blue"),
+     pch = 16)
+
+abline(0, 1, lty = 2)
+legend("topleft",
+       legend = c("Conservative", "Not conservative"),
+       col = c("red", "blue"),
+       pch = 16,
+       bty = "n")
+```
+Compared to the previous two parts there are several points devaiate substiantially from the diagonal including extreme cases where the leave one out predicted probability is much higher or much lower than the full data prediction. This shows that some points have a great deal of leverage. In particular, there are points with moderate full-data predicted probabilites(0.2-0.6) whose leave one out predictions increase dramatically(0.7-0.9) as well as some conservative observations where the predicted probabilities drops sharply when left out. This indicates that the interaction model is highly sensitive to specific data points. 
+
+# Question 7
+
+## part a
+
+```{r,echo=FALSE}
+library(knitr)
+y <- n90_pol$conservative
+n <- length(y)
+pred_const <- rep(0, n) 
+pred_logit<- ifelse(q6a_preds[,2] >= 0.5, 1, 0)
+pred_gam<- ifelse(q6b_preds[,2] >= 0.5, 1, 0)
+pred_int<- ifelse(q6c_preds[,2] >= 0.5, 1, 0)
+
+mr_const<-mean(pred_const!= y)
+mr_logit<-mean(pred_logit!= y)
+mr_gam<-mean(pred_gam!= y)
+mr_int<-mean(pred_int!= y)
+
+se_const<- sqrt(mr_const*(1-mr_const)/n)
+se_logit<- sqrt(mr_logit*(1-mr_logit)/n)
+se_gam<- sqrt(mr_gam*(1-mr_gam)/n)
+se_int<- sqrt(mr_int*(1-mr_int)/n)
+
+q7a_df <- data.frame(
+  Model = c("Constant", "GLM", "GAM", "GAM-Interaction"),
+  Misclassification_Rate = round(c(mr_const, mr_logit, mr_gam, mr_int), 2),
+  Std_Error = round(c(se_const, se_logit, se_gam, se_int), 2)
+)
+
+kable(q7a_df, caption = "Misclassification Rates and Standard Errors")
+```
+The additive GAM has the lowest misclassification rate, followed by the logistic regression (GLM), and then the GAM with an interaction, which has the highest error rate. However, all of these rates are quite close to each other and are within about one standard error, suggesting that the differences in classification performance are not substantial.
+
+## part b
+
+The misclassification rate for a classifier which always predicts “not conservative” is 0.14. None of the models outperform this baseline, and the GAM(without interaction) achieve the same error rate, while the logistic regression and the GAM with interaction perform worse. Therefore, none of the fitted models provide an improvement over simply always predicting “not conservative.”
+
+## part c
+
+It is better to use the leave-one-out probabilities because they provide an estimate of how well the model performs on new, unseen data, while the full-data probabilities are computed using models fit on all observations, including the one being predicted, which can lead to overly optimistic results due to overfitting. Leave-one-out predictions avoid this issue by ensuring that each prediction is made from a model that did not use that observation, giving a more realistic assessment of predictive performance.
+
+# Question 8 
+
+## part a 
+
+```{r,echo=FALSE}
+y <- n90_pol$conservative
+n <- length(y)
+p_const <- rep(mean(y), n)   
+p_logit <- q6a_preds[,2]
+p_gam   <- q6b_preds[,2]
+p_int   <- q6c_preds[,2]
+#computes the log loss with inputs of probability and the degree of conservatism
+logloss <- function(y, p) {
+  -(y*log(p)+(1-y)*log(1-p))
+}
+loss_const<-logloss(y, p_const)
+loss_logit<-logloss(y, p_logit)
+loss_gam<-logloss(y, p_gam)
+loss_int<-logloss(y, p_int)
+
+mean_const<-mean(loss_const)
+mean_logit<-mean(loss_logit)
+mean_gam<-mean(loss_gam)
+mean_int<-mean(loss_int)
+
+se_const<-sd(loss_const)/sqrt(n)
+se_logit<-sd(loss_logit)/sqrt(n)
+se_gam<-sd(loss_gam)/sqrt(n)
+se_int<-sd(loss_int)/sqrt(n)
+
+q8a_df <- data.frame(
+  Model = c("Constant", "GLM", "GAM", "GAM-Interaction"),
+  Mean_Log_Loss = round(c(mean_const, mean_logit, mean_gam, mean_int), 2),
+  Std_Error = round(c(se_const, se_logit, se_gam, se_int), 2)
+)
+kable(q8a_df, caption = "Mean Log Loss and Standard Errors")
+```
+The GAM(without interaction) has the best score with the lowest mean log loss of (0.37). Since lower log loss indicates more accurate probability estimate, the GAM(without interaction) has the most accurate proababilities. 
+
+## part b
+
+It is better to use the leave-one-out probabilities because they provide an unbiased estimate of how well the predicted probabilities will perform on new data. Using the full-data probabilities would evaluate the model on the same data it was trained on, which can lead to overly optimistic log loss values due to overfitting. This is similar to the reasoning in question 7(c), since both aim to assess out-of-sample performance, but here the focus is specifically on the accuracy of the predicted probabilities rather than just classification accuracy.
+
+# Question 9 
+
+Based on this data set there is some evidence that brain anatomy is related to political views, however, the relationship is limited. Across the three fitted models, larger amygdala values were generally associated with a higher probability of being conservative, while larger ACC values were generally associated with a lower probability, although the effect of ACC appeared nonlinear in the GAM. The GAM with the interaction term suggested that the effect of one brain region can depend on the value of the other, however,  the interaction term was relatively small compared to the additive terms and thus the main pattern was still largely additive. The plots of the predicted probabilities showed that these brain variables could shift the predicted probability of conservatism by a substantial amount, however, the leave one out analyses also showed that more flexible models(interaction GAM) were less stable and more sensitive to individual observations. In terms of classification, none of the fitted models outperformed the constant classifier(classifier that always predicts not conservative) and thus the brain variables did no show major gains in classification accuracy. On the contrary, for the probability prediction, the GAM(without interaction) had the best mean log loss which suggests that it gave the most accurate probabilities of the 4 models(including the constant) Therefore, overall, the results suggest that amygdala and ACC are associated with conservatism in this sample, however, it is extremely limited and the evidence is not strong enough to support this argument strongly especially given the small sample size and the instability of some of the models(GAM with interaction)
+
+# Question 10 
+
+Approximately 4 hours
+

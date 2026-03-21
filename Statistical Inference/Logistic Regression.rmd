@@ -1,0 +1,504 @@
+
+---
+title: "36-402 Homework 3"
+subtitle: Due Tuesday, Feburary 5th by 5:59pm
+author: "Platt Yoon"
+output: pdf_document
+urlcolor: blue
+---
+
+
+# Problem 1:
+
+**Since we know that $P = \frac{Y}{N}$ and from the given explanation, we have $Y \approx cN^b$ if we plug Y in terms of the area's gross per capita product, we get**
+\[P=\frac{Y}{N} \approx \frac{cN^b}{N} = cN^{b-1}\]
+
+**and when we take the log on both sides, we get**
+
+\[log(P)\approx log(cN^{b-1} = log(c) + (b-1)log(N)\]
+
+therefore, now when we compare it to $logP \approx \beta_0 + \beta_1logN$ we have
+\newline
+\[\beta_0 = log(c), \beta_1 =(b-1)\]
+
+
+# Problem 2: 
+```{r,echo= FALSE,warning=FALSE}
+data <- read.csv("bea-2006.csv")
+real_data <- subset(data,!is.na(pcgmp) & !is.na(pop))
+real_data$logP <- log(real_data$pcgmp)  
+real_data$logN <- log(real_data$pop) 
+real_data <- subset(real_data, is.finite(logP) & is.finite(logN))
+```
+
+## Part A
+
+**Since equation 1 is $Y\approx cN^b$ and since $P=\frac{Y}{N}$ as shown above, the regression $logP = \beta_0 + beta_1logN + \epsilon$ should match with the power-law form with:**
+
+\[\beta_0 = log(c), \beta_1 =(b-1)\]
+\newline
+**therefore, from this estimated coefficients ${\hat{\beta}_1}, {\hat{\beta}_0}$ becomes**
+
+\[\hat{c} = e^{\hat{\beta}_0}, \hat{b} = 1 +{\hat{\beta}_1}\]
+
+
+## Part B
+```{r,echo= FALSE,warning=FALSE}
+library(knitr)
+log_model <- lm(logP ~ logN, data = real_data)
+beta_hat <- coef(log_model)
+beta0_hat <- beta_hat[1]
+beta1_hat <- beta_hat[2]
+c_hat <- exp(beta0_hat)
+b_hat <- 1 + beta1_hat
+results_table <- data.frame(
+  Parameter = c("beta_0_hat", "beta_1_hat", "c_hat", "b_hat"),
+  Estimate = c(beta0_hat, beta1_hat, c_hat, b_hat)
+)
+
+kable(results_table, digits = 4)
+```
+**From the table, since we have $\hat{b}$ greater than 1, it supports supra-linear scaling. This is because our original model is $Y = cN^b$, and since b is greater than 1, it suports the supra-linear scaling claim.**
+
+## Part C
+```{r,echo= FALSE,warning=FALSE}
+set.seed(2026)
+cv.lm <- function(real_data, formulae, nfolds = 5) {
+  formulae <- sapply(formulae, as.formula)
+  data <- na.omit(real_data)
+  n <- nrow(data)
+  fold.labels <- sample(rep(1:nfolds, length.out = n))
+  mses <- matrix(NA, nrow = nfolds, ncol = length(formulae))
+  colnames(mses) <- as.character(formulae)
+  for (fold in 1:nfolds) {
+    test.rows <- which(fold.labels == fold)
+    train <- data[-test.rows, ]
+    test  <- data[test.rows, ]
+    for (form in 1:length(formulae)) {
+      current.model <- lm(formulae[[form]], data = train)
+      predictions <- predict(current.model, newdata = test)
+      test.responses <- eval(formulae[[form]][[2]], envir = test)
+      test.errors <- test.responses - predictions
+      mses[fold, form] <- mean(test.errors^2)
+    }
+  }
+  colMeans(mses)
+}
+q2.df <- real_data[, c("logP", "logN")]
+cv_q2 <- cv.lm(
+  q2.df,
+  c("logP ~ logN"),
+  nfolds = 5
+)
+q2c_table <- data.frame(
+  Five_fold_CV_MSE = cv_q2
+)
+kable(q2c_table, digits = 6)
+```
+**The MSE of this model under 5-fold cross-validation is 0.054504**
+
+
+# Problem 3:
+```{r,echo= FALSE,warning=FALSE}
+set.seed(2026)
+sfit <- smooth.spline(
+  x = real_data$logN,
+  y = real_data$logP,
+  cv = TRUE
+)
+
+cv_mse <- sfit$cv.crit
+kable(data.frame(Q3_CV_MSE = cv_mse), digits = 6)
+plot(real_data$logN, real_data$logP,
+     pch = 16, cex = 0.6, col = "red",
+     xlab = "log N (population)",
+     ylab = "log P (per-capita GMP)",
+     main = "Nonparametric spline")
+lines(sfit, lwd = 2)
+```
+**The MSE under cross validation is 0.052877**
+
+
+# Problem 4:
+
+## Part A
+```{r,echo= FALSE,warning=FALSE}
+cities <- c("Cheyenne, WY", "Pittsburgh, PA", "Dallas-Fort Worth-Arlington, TX")
+city_rows <- subset(data, MSA %in% cities & !is.na(pop))
+city_rows <- city_rows[match(cities, city_rows$MSA), ] 
+new_q2 <- data.frame(logN = log(city_rows$pop))
+pred_logP_q2 <- predict(log_model, newdata = new_q2)
+pred_P_q2 <- exp(pred_logP_q2)
+
+q4a_table <- data.frame(
+  City = city_rows$MSA,
+  Pred_P_Q2 = as.numeric(pred_P_q2)
+)
+
+kable(q4a_table, digits = 4)
+```
+**The predicted per-capita for each are (i) Cheyenne,WY: 27099.5 (ii) Pittsburgh,PA :40895.54, (iii) Dallas, TX: 45913.64 **
+
+## Part B
+```{r,echo= FALSE,warning=FALSE}
+logN_city <- log(city_rows$pop)
+pred_logP_q3 <- predict(sfit, x = logN_city)$y
+pred_P_q3 <- exp(pred_logP_q3)
+
+q4b_table <- data.frame(
+  City = city_rows$MSA,
+  Pred_P_Q3 = as.numeric(pred_P_q3)
+)
+kable(q4b_table, digits = 4)
+```
+**Under the model from Q3,the predicted per-capita GMP for the three cities are (i) Cheyenne,WY: 30064.85 (ii) Pittsburgh,PA :43419.53, (iii) Dallas, TX: 46660.35**
+
+# Problem 5:
+
+## Part A
+```{r,echo= FALSE,warning=FALSE}
+set.seed(2026)
+#directly from 6.2 in textbook
+bootstrap <- function(tboots, summarizer, ...) {
+  summaries <- apply(tboots, 1, summarizer, ...)
+  return(t(summaries))
+}
+
+bootstrap.se <- function(statistic, simulator, B) {
+  bootstrap(rboot(statistic, simulator, B), summarizer = sd)
+}
+equitals <- function(x, alpha) {
+  lower <- quantile(x, alpha/2,na.rm = TRUE)
+  upper <- quantile(x, 1 - alpha/2,na.rm = TRUE)
+  return(c(lower, upper))
+}
+rboot <- function(statistic, simulator, B) {
+  tboots <- replicate(B, statistic(simulator()))
+  if (is.null(dim(tboots))) {
+    tboots <- array(tboots, dim = c(1, B))
+  }
+  return(tboots)
+}
+
+
+bootstrap.ci.notes <- function(statistic = NULL, simulator = NULL, tboots = NULL, B=if(!is.null(tboots)) { ncol(tboots) },t.hat, level) {
+  if (is.null(tboots)) {
+    stopifnot(!is.null(statistic))
+    stopifnot(!is.null(simulator))
+    stopifnot(!is.null(B))
+    tboots <- rboot(statistic, simulator, B)
+  }
+  alpha <- 1 - level
+  intervals <- bootstrap(tboots, summarizer = equitals, alpha = alpha)
+  upper <- t.hat + (t.hat - intervals[, 1])
+  lower <- t.hat + (t.hat - intervals[, 2])
+  CIs <- cbind(lower = lower, upper = upper)
+  return(CIs)
+}
+
+q5.city.newdata <- data.frame(logN = log(city_rows$pop))
+q5.city.names <- city_rows$MSA
+
+q5a.resample.residuals <- function() {
+  new.frame <- real_data
+  new.frame$logP <- fitted(log_model) + sample(resid(log_model), replace = TRUE)
+  return(new.frame)
+}
+q5a.statistic <- function(data) {
+  fit <- lm(logP ~ logN, data = data)
+  preds.P <- exp(predict(fit, newdata = q5.city.newdata))
+  c(coefficients(fit), preds.P)
+}
+
+q5a.t.hat <- c(coefficients(log_model),
+               exp(predict(log_model, newdata = q5.city.newdata)))
+B <- 10000
+q5a.ci <- bootstrap.ci.notes(
+  statistic = q5a.statistic,
+  simulator = q5a.resample.residuals,
+  B = B,
+  t.hat = q5a.t.hat,
+  level = 0.93)
+
+q5a.labels <- c("beta0", "beta1",
+                paste0("conf", q5.city.names))
+q5a.table <- data.frame(
+  Quantity = q5a.labels,
+  Lower_93 = q5a.ci[, "lower"],
+  Upper_93 = q5a.ci[, "upper"],
+  row.names = NULL
+)
+
+kable(q5a.table, digits = 6)
+```
+**The confidence intervals for each are $\beta_0: (8.531884,9.057494)$ and for $\beta_1: (	0.103562,0.144998)$ Our confidence intervals for our predictions from Q4a would be: (i) Cheyenne, WY:(26141.967831,28026.142248), (ii) Pittsburgh,PA :(38917.237777,42786.277510) (iii) Dallas, TX: (42855.129213,48784.940460)**
+
+## Part B
+
+
+```{r,echo= FALSE,warning=FALSE}
+#Directly from notes 6.4.2
+set.seed(2026)
+resample <- function(x) {
+  sample(x, size = length(x), replace = TRUE)
+}
+resample.data.frame <- function(data) {
+  sample.rows <- resample(1:nrow(data))
+  return(data[sample.rows, ])
+}
+q5b.resample.cases <- function() {
+  resample.data.frame(real_data)
+}
+
+q5b.statistic <- function(data) {
+  fit <- lm(logP ~ logN, data = data)
+  preds.P <- exp(predict(fit, newdata = q5.city.newdata))
+  c(coefficients(fit), preds.P)
+}
+q5b.t.hat <- q5a.t.hat
+B <- 10000
+q5b.ci <- bootstrap.ci.notes(
+  statistic = q5b.statistic,
+  simulator = q5b.resample.cases,
+  B = B,
+  t.hat = q5b.t.hat,
+  level = 0.93)
+
+q5b.table <- data.frame(
+  Quantity = q5a.labels,
+  Lower_93 = q5b.ci[, "lower"],
+  Upper_93 = q5b.ci[, "upper"],
+  row.names = NULL
+)
+
+kable(q5b.table, digits = 6)
+
+```
+**The confidence intervals for each are $\beta_0: (8.54071,9.048286)$ and for $\beta_1: (0.10441,0.144074)$ Our confidence intervals for our predictions from Q4a would be: (i) Cheyenne, WY:(26120.86998,28009.770554), (ii) Pittsburgh,PA :(39041.77035,42697.683913) (iii) Dallas, TX: (43031.55344,48683.124732)**
+
+## Part C
+
+```{r,echo= FALSE,warning=FALSE}
+set.seed(2026)
+#codes adapted from section 6.4.2
+q5c.evaluation.points <- data.frame(logN = log(city_rows$pop))
+q5c.city.names <- city_rows$MSA
+q5c.npreg <- function(data, plot.df = q5c.evaluation.points) {
+  mdl <- smooth.spline(x = data$logN, y = data$logP, cv = TRUE)
+  predict(mdl, x = plot.df$logN)$y
+}
+q5c.simulator <- function() {
+  resample.data.frame(real_data)
+}
+q5c.t.hat.logP <- q5c.npreg(real_data, plot.df = q5c.evaluation.points)
+B <- 10000
+q5c.tboots <- rboot(
+  statistic = q5c.npreg,
+  simulator = q5c.simulator,
+  B = B)
+
+q5c.ci.logP <- bootstrap.ci.notes(
+  tboots = q5c.tboots,
+  t.hat  = q5c.t.hat.logP,
+  level  = 0.93)
+
+q5c.table <- data.frame(
+  City = q5c.city.names,
+  Lower_93 = exp(q5c.ci.logP[, "lower"]),
+  Upper_93 = exp(q5c.ci.logP[, "upper"])
+)
+
+kable(q5c.table, digits = 6)
+```
+**Using case resampling to give 93% CIs for the predictions of Q4b are: (i) Cheyenne, WY:(27774.64	,33939.91), (ii) Pittsburgh,PA :(41077.05,46981.22) (iii) Dallas, TX: (42818.45,50400.30) **
+
+# Problem 6
+
+## Part A
+```{r,echo= FALSE,warning=FALSE}
+#brought directly from textbook 6.4.2
+q6a.evaluation.points <- data.frame(
+  logN = seq(from = min(real_data$logN),
+             to   = max(real_data$logN),
+             length.out = 300)
+)
+q6a.q2.logP <- predict(log_model, newdata = q6a.evaluation.points)         
+q6a.q3.logP <- predict(sfit, x = q6a.evaluation.points$logN)$y
+
+q6a.N <- exp(q6a.evaluation.points$logN)
+q6a.q2.P <- exp(q6a.q2.logP)
+q6a.q3.P <- exp(q6a.q3.logP)
+q6a.xlim <- range(real_data$pop, q6a.N, finite = TRUE)
+q6a.ylim <- range(real_data$pcgmp, q6a.q2.P, q6a.q3.P, finite = TRUE)
+
+
+
+plot(0, type = "n",
+     xlim = q6a.xlim, ylim = q6a.ylim,
+     xlab = "N ",
+     ylab = "P ",
+     main = "P vs N with power-law and spline")
+
+lines(q6a.N, q6a.q2.P, lwd = 2, col = "black")
+lines(q6a.N, q6a.q3.P, lwd = 2, col = "blue")
+
+points(real_data$pop, real_data$pcgmp, pch = 16, cex = 0.55, col = "grey50")
+rug(real_data$pop, side = 1, col = "grey70")
+par(xpd = TRUE)
+legend("topright",
+       inset = c(-0.1, 0),  
+       legend = c("Q2: power-law ",
+                  "Q3: spline"),
+       col = c("black", "blue"),
+       lwd = 2,
+       bty = "n")
+par(xpd = FALSE)
+```
+**Overall both the power law and the spline model have similar shapes whereas both produce a smooth steadily increasing curve that rises quickly for small populations and then gradually flatten as the population grows. The main difference for the spline model is that it rises a bit more sharply before leveling off for smaller populations. In terms of prediction, the spline model achieved slightly smaller CV MSE than the power-law model and from the graph, the spline model provides modest improvements in prediction by adapting to local variations for smaller metropolitan areas shown by the rapid increase in slope for smaller populations.**
+
+
+## Part B
+
+```{r,echo= FALSE,warning=FALSE}
+#From 6.4.2 from textbook
+q6b.npreg <- function(data, plot.df = q6a.evaluation.points) {
+  mdl <- smooth.spline(x = data$logN, y = data$logP, cv = TRUE)
+  return(predict(mdl, x = plot.df$logN)$y)
+}
+q6b.simulator <- function() {
+  resample.data.frame(real_data)   
+}
+q6b.main.curve <- q6b.npreg(real_data, plot.df = q6a.evaluation.points)
+B <- 800
+q6b.resampled.curves <- rboot(
+  statistic = q6b.npreg,
+  simulator = q6b.simulator,
+  B = B
+)
+q6b.ci <- bootstrap.ci.notes(
+  tboots = q6b.resampled.curves,
+  t.hat  = q6b.main.curve,
+  level  = 0.93
+)
+q6b.q2.curve <- predict(log_model, newdata = q6a.evaluation.points)
+q6b.N <- exp(q6a.evaluation.points$logN)
+q6b.main.P  <- exp(q6b.main.curve)
+q6b.lower.P <- exp(q6b.ci[, "lower"])
+q6b.upper.P <- exp(q6b.ci[, "upper"])
+q6b.q2.P    <- exp(q6b.q2.curve)
+q6b.xlim <- range(real_data$pop, q6b.N, finite = TRUE)
+q6b.ylim <- range(real_data$pcgmp, q6b.lower.P, q6b.upper.P, q6b.q2.P, finite = TRUE)
+
+plot(0, type = "n",
+     xlim = q6b.xlim, ylim = q6b.ylim,
+     xlab = "N ",
+     ylab = "P ",
+     main = "Q3 spline with 93% bootstrap confidence band ")
+for (i in 1:ncol(q6b.resampled.curves)) {
+  lines(q6b.N, exp(q6b.resampled.curves[, i]), lwd = 0.2, col = "grey80")
+}
+lines(q6b.N, q6b.lower.P, lwd = 2, col = "grey40")
+lines(q6b.N, q6b.upper.P, lwd = 2, col = "grey40")
+lines(q6b.N, q6b.main.P, lwd = 2, col = "blue")
+lines(q6b.N, q6b.q2.P,   lwd = 2, col = "black")
+points(real_data$pop, real_data$pcgmp, pch = 16, cex = 0.55, col = "grey50")
+rug(real_data$pop, side = 1, col = "grey70")
+
+legend("topleft",
+       legend = c("Q2 power-law", "Q3 spline", "Q3 93% band", "Bootstrap curves"),
+       col = c("black", "blue", "grey40", "grey80"),
+       lwd = c(2, 2, 2, 1),
+       bty = "n")
+```
+**The bootstrap confidence band around the spline regression is relatively tight over the range where most of the data lie and widens toward larger population sizes where observations become sparser. The band closely follows the shape of the spline, indicating stable nonparametric estimates across bootstrap samples. The power-law model from Q2 lies largely within the splines confidence band, although small deviations appear at lower population levels.**
+
+# Problem 7
+
+## Part A
+```{r,echo= FALSE,warning=FALSE}
+q7a.delta_logP <- as.numeric(coef(log_model)[2] * log(1.1))
+q7a.table <- data.frame(
+  City = city_rows$MSA,
+  Delta_logP_Q2 = rep(q7a.delta_logP, nrow(city_rows))
+)
+
+kable(q7a.table, digits = 6)
+```
+**The predicted change in logP for a 10 percent increase in population for the given cities are (i)Cheyenne: 0.011836 (ii) Pittsburgh: 0.011836 (iii) Dallas:0.011836. They are all the same**
+
+## Part B
+```{r,echo= FALSE,warning=FALSE}
+q7b.logN <- log(city_rows$pop)
+q7b.logP_now  <- predict(sfit, x = q7b.logN)$y
+q7b.logP_up10 <- predict(sfit, x = q7b.logN + log(1.1))$y
+q7b.delta_logP <- as.numeric(q7b.logP_up10 - q7b.logP_now)
+q7b.table <- data.frame(
+  City = city_rows$MSA,
+  Delta_logP_Q3 = q7b.delta_logP
+)
+kable(q7b.table, digits = 6)
+```
+**The predicted change in logP for a 10 percent increase in population for the given cities are (i)Cheyenne: -0.022561 (ii) Pittsburgh: 0.005980 (iii) Dallas:0.007897.**
+
+## Part C
+
+**The non-parametric model does not support a single global supra-linear scaling law.**
+
+# Problem 8:
+
+## Part A
+
+**In Q7(a) we defined** $\Delta log P = \beta_1 log(1.1)$ **therefore, we can use out confidence intervals for $\beta_1$ and multiply both endpoints by log(1.1) to give CIS for 7(a)**
+
+## Part B
+
+```{r,echo= FALSE,warning=FALSE}
+q8b.resample <- function() {
+  resample.data.frame(real_data)
+}
+q8b.statistic <- function(data) {
+  mdl <- smooth.spline(x = data$logN, y = data$logP, cv = TRUE)
+  logN.city <- log(city_rows$pop)
+  mu.now  <- predict(mdl, x = logN.city)$y
+  mu.up10 <- predict(mdl, x = logN.city + log(1.1))$y
+  return(mu.up10 - mu.now)
+}
+
+q8b.t.hat <- q8b.statistic(real_data)
+B <- 2000
+q8b.tboots <- rboot(statistic = q8b.statistic,
+                    simulator = q8b.resample,
+                    B = B)
+q8b.ci <- bootstrap.ci.notes(tboots = q8b.tboots,
+                            t.hat  = q8b.t.hat,
+                            level  = 0.93)
+q8b.table <- data.frame(
+  City = city_rows$MSA,
+  Lower_93 = q8b.ci[, "lower"],
+  Upper_93 = q8b.ci[, "upper"]
+)
+
+kable(q8b.table, digits = 6)
+```
+**The 93% confidence interval for Q7b is (i) Cheyenne,WY: (-0.057707,0.009722) (ii)Pittsburgh,PA: (-0.005509,0.022395), (iii) Dallas, TX: (-0.000788,0.015558)**
+
+
+## Part C
+
+**Since each of these intervals includes 0, under the non-parametric model, we cannot say at the 93 percent level, that a 10 percent increase produces a strictly positive change in logP for any of these three city sizes and therefore, it does not strongly support the supra-linear scaling interpertation.**
+
+# Problem 9:
+
+**Based on the analyses so far, the data give mixed/ambiguous support for supra-linear scaling. Even though from the power-law fit we concluded that $\hat{b}$ is great than 1, and that the Q2 curve lies mostly inside the 93% bootstrap confidence band for the spline curve from question3, based on the nonparametric fit we found that the relationship between logP and logN are not constant slope. Moreover, from question 8 taking into account the uncertainty on the 10 percent increase effect, the 93 percent confidence intervals include 0 for Cheyenne, Pittsburgh, and Dallas which means that the data does not provide strong evidence(at the 93 level) that a 10 percent increase in N reliably increases log P at those specific city sizes under the flexible model.All in all, the global power-law with $b > 1$ is plausible but the nonparametric results and the bootstrap uncertainty suggest that the evidence for a uniform supra-linear scaling effect across all cities is small.**
+
+# Problem 10:
+
+**It took me approximately 13 hours to finish**
+
+
+# Extra Credit
+
+
+
+
+

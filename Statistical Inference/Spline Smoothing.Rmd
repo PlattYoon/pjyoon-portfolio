@@ -1,0 +1,1137 @@
+---
+title: "36-402 Homework 6"
+author: "Platt Yoon"
+subtitle: Due Tuesday, March 13th by 5:59pm
+output:
+  pdf_document: default
+  html_document:
+    df_print: paged
+urlcolor: blue
+---
+
+# Question 1
+
+## part a 
+
+**If we set $\hat{Y}=0$ then the only way for any loss is when the true outcome is Y=1. Therefore this is a false negative and thus the loss is $\ell_{10}$. Therefore, the expected loss**
+
+$E[loss|X=x,\hat{Y} =0] = \ell_{10} P(Y=1|X=x) + 0*P(Y=0|X=x)$
+
+**and since $\mu(x) = P(Y=1|X=x)$**
+
+**the expected loss is $\ell_{10}\mu(x)$ the only time for any loss to happen is when the true class is Y=0 which is a false positive and thus the loss is  $\ell_{01}$.**
+
+## part b
+
+**If we set $\hat{Y}=1$ then the only time we get a loss is when the true class is Y=0 and thus the loss is a false positive which is $\ell_{01}$**
+
+$E[loss|X=x,\hat{Y} =1] = \ell_{01} P(Y=0|X=x) + 0*P(Y=1|X=x)$
+
+**and since we know that $P(Y=0|X=x) = 1 - P(Y=1|X=x) = 1- \mu(x)$**
+
+**we then get**
+
+$E[loss|X=x,\hat{Y} =1] = \ell_{01}(1-\mu(x)) = \ell_{01}-\ell_{01}\mu(x)$
+
+
+## part c
+
+**To minimize the expected loss, we choose $\hat{Y} =1$ which is when **
+
+$\ell_{01}-\ell_{01}\mu(x) < \ell_{10}\mu(x)$
+
+**Now solving for this we have**
+
+$\ell_{01} < (\ell_{01} + \ell_{10})\mu(x)$
+
+$= \mu(x) > \frac{\ell_{01}}{\ell_{01} + \ell_{10}}\equiv t$
+
+**Therefore,**
+
+$\hat{Y}=1$ when $\mu(x) > t$
+
+$\hat{Y}=0$ when $\mu(x) < t$
+
+**Therefore, $\mu(X) =t$, both choices give the same expected loss**
+
+## part d
+
+**From part c we have that $\frac{\ell_{01}}{\ell_{01} + \ell_{10}}=t$ If we assume that $\ell_{01} = \ell_{10}$, then we have **
+
+$t = \frac{\ell_{01}}{\ell_{01} + \ell_{10}} = \frac{1}{2}$
+
+**Therefore, the rule from part(c) becomes**
+
+$\hat{Y}=1$ when $\mu(x) > \frac{1}{2}$
+
+$\hat{Y}=0$ when $\mu(x) < \frac{1}{2}$
+
+**and when $\mu(x) = \frac{1}{2}$ then both choices have the same expected loss.**
+
+
+## part e
+
+**Since the optimal rule that we found from part d was:**
+
+$\hat{Y}=1$ when $\mu(x) > \frac{1}{2}$
+
+$\hat{Y}=0$ when $\mu(x) < \frac{1}{2}$
+
+**Now, $\mu(x) > 0.5$ means:**
+
+
+$P(Y=1 \mid X=x) > P(Y=0 \mid X=x),$
+
+**so class 1 is more probable than class 0. Similarly,**
+$\mu(x) < 0.5$
+**means class 0 is more probable. Therefore, if all we care about maximizing how often we are correct, then we should predict whichever class is more likely.**
+
+
+# Question 2
+
+## part a 
+
+**The classifier that always predicts $\hat{Y} =0$ has a misclassification when Y=1 since these are the only cases where $\hat{Y} \neq Y$**
+
+**Therefore, $P(\hat{Y} \neq Y) = P(Y=1)$**
+
+**Moreover, the false positive rate would be:**
+
+$FPR = P(\hat{Y} =1| Y=0)$
+
+**however, since this classifier never predicts 1, therefore,**
+
+$FPR = 0$
+
+**Lastly, the false negative rate is **
+
+$FNR = P(\hat{Y} =0| Y=1)$
+
+**Since the classifier always predicts 0, whenever Y=1, $\hat{Y} = 0$ and thus **
+
+$FNR = 1$
+
+## part b
+
+**For the classifier that always predicts $\hat{Y} =1$ has a misclassificon when Y=0 since these are the only cases where $\hat{Y} \neq Y$. Since we know that $P(Y=0) = 1- P(Y=1)$: **
+
+$P(\hat{Y} \neq Y) = P(Y=0) = 1- P(Y=1)$
+
+**For the false positive rate, we have**
+
+$FPR = P(\hat{Y} =1| Y=0)$
+
+**Since this classifier always predicts 1, whenever Y=0, it still outputs $\hat{Y} =1$**
+
+$FPR = 1$
+
+**The flase negative rate is: **
+
+$FNR = P(\hat{Y} =0| Y=1)$
+
+**Since this classifier never predicts 0, therefore,**
+
+$FNR = 0$
+
+
+## part c
+
+**From part a we have a classifier with a misclassification rate of P(Y=1) and from part b we have a classifier with a misclassification rate of P(Y=0). Therefore, if we ignore the data completely, the best constant classifier is the classifier which always predicts the more probable class which has a misclassification rate that is equivalent to min(P(Y=1),P(Y=0)). Therefore, a good classifier with data should have a misclassification rate at most min(P(Y=1),P(Y=0)) otherwise it performs worse than the two bad classifiers from part a and b.**
+
+## part d
+
+**From above we have that:**
+
+$FPR = P(\hat{Y}=1|Y=0)$
+
+**in this case we have the classifier's output completely independent of Y. Therefore, conditioning on Y=0 does not change the probability of prediction 1 and threfore, **
+
+$FPR = P(\hat{Y}=1|Y=0) = P(\hat{Y}=1) = q$
+
+**Similarly we have that:**
+
+$FNR = P(\hat{Y}=0|Y=1)$
+
+**and since $\hat{Y}$ is independent of Y**
+
+$FNR=P(\hat{Y}=0|Y=1) = P(\hat{Y}=0) = 1-q$
+
+## part e
+
+**From the above we know that:**
+
+$FPR = P(\hat{Y}=1|Y=0)$
+
+**Therefore we can modify this to say:**
+
+$1-FPR = 1-P(\hat{Y}=1|Y=0) = P(\hat{Y}=0|Y=0)$
+
+**Therefore, 1-FPR is the true negative rate which is the probability of being correct when the true class is 0 with the condition of $FNR > 1-FNR$ and therefore, we have:**
+
+$P(\hat{Y}=1|Y=0) > P(\hat{Y}=0|Y=0)$
+
+**Thus, the classifier is more likely to predict 0 when Y=1 than when Y=0 meaning that the prediction $\hat{Y}=0$ is in favor of Y=1 rather than Y=0. This essentially means that the classifier is using the labels in the opposite way showing us that if the classifier predicts 0, it tends to be wrong more often than right. **
+
+# Question 3
+
+## part a 
+
+**Since $Y \in \{0,1\}$,**
+$E[(Y-q)^2] = p(1-q)^2 + (1-p)(0-q)^2.$
+
+**Thus,**
+$E[(Y-q)^2] = p(1-q)^2 + (1-p)q^2.$
+
+**Upon expanding we get: **
+$= p(1-2q+q^2) + (1-p)q^2,$
+
+$= p - 2pq + pq^2 + q^2 - pq^2,$
+
+$= p - 2pq + q^2.$
+
+**Now completing the square:**
+$p - 2pq + q^2 = (q-p)^2 + p(1-p).$
+
+**Therefore,**
+$E[(Y-q)^2] = (q-p)^2 + p(1-p).$
+
+**Since $p(1-p)$ does not depend on $q$, the expression is minimized when $(q-p)^2 = 0,$ which occurs uniquely at $q=p$ and therefore is a proper scoring function**
+
+## part b
+
+**We have $P(Y=1)=p$ and $P(Y=0)=1-p$ and from the question we have that the loss function is: **
+
+$\ell(Y,q)=-Ylogq-(1-Y)log(1-q)$
+
+**From this we know that the expected loss would be:**
+
+$E[\ell(Y,q)]=\sum_yP(Y=y)\ell(y,q)$
+
+**Since Y can only bebetween 1 or 0, we get:**
+
+$E[\ell(Y,q)] = P(Y=1)\ell(1,q) + P(Y=0) \ell(0,q)$
+
+**For each case we have:**
+
+**If Y=1:**
+
+$\ell(1,q) = -(1)logq -(0)log(1-q) = -logq$
+
+**If Y=0:**
+
+$\ell(0,q) = -(0)logq -(1)log(1-q) = -log(1-q)$
+
+**Now substituting this back in we get:**
+
+$E[\ell(Y,q)] = p(-\log q) + (1-p)(-\log(1-q)).$
+
+$=E[\ell(Y,q)] = -p\log q - (1-p)\log(1-q).$
+
+**When we differentiate with respect to $q:$**
+
+
+$\dfrac{d}{dq}E[\ell(Y,q)] = -\dfrac{p}{q} + \dfrac{1-p}{1-q}.$
+
+**Whe then set the derivative equal to zero:**
+
+$-\dfrac{p}{q} + \dfrac{1-p}{1-q} = 0.$
+
+$=> \dfrac{1-p}{1-q} = \dfrac{p}{q},$
+
+**Therefore, we now get:**
+
+$(1-p)q = p(1-q).$
+
+**Expanding,**
+
+$q - pq = p - pq,$
+
+**and therefore**
+
+$q=p.$
+
+**To verify this we now take the second derivative:**
+
+
+$\dfrac{d^2}{dq^2}E[\ell(Y,q)] = \dfrac{p}{q^2} + \dfrac{1-p}{(1-q)^2}.$
+
+**For $0<q<1,$ this is strictly positive, so $E[\ell(Y,q)]$ is strictly convex in $q.$ Therefore, the critical point at $q=p$ is the unique minimum and therefore, the log probability loss is a proper scoring function.**
+
+## part c
+
+**For the absolute loss, $\ell(Y,q)=|Y-q|.$**
+
+**Since $Y \in \{0,1\},$ and from the above questions we have:**
+
+$E[|Y-q|]=P(Y=1)|1-q|+P(Y=0)|0-q|.$
+
+$= p|1-q| + (1-p)|0-q|.$
+
+**Since $0 \le q \le 1,$ we have $|1-q|=1-q$ and $|0-q|=q.$ Therefore, **
+
+$E[|Y-q|] = p(1-q) + (1-p)q.$
+
+**Simplifying,**
+
+$E[|Y-q|] = p - pq + q - pq,$
+
+$= p + q - 2pq,$
+
+$= p + q(1-2p).$
+
+**Now, if $p>1/2,$ then $1-2p<0,$ so $E[|Y-q|]$ decreases as $q$ increases,therefore, the minimum is attained at $q=1.$**
+
+**If $p<1/2,$ then $1-2p>0,$ so $E[|Y-q|]$ increases as $q$ increases,therefore, the minimum is attained at $q=0.$**
+
+**If $p=1/2,$ then $1-2p=0,$ so the expected loss is the same for every $q.$**
+
+**Therefore, the absolute loss is not minimized uniquely at $q=p,$ so it is not a proper scoring function.**
+
+## part d
+
+**Alice predicts $p$, while Babur predicts $q \ne p.$ Since the scoring rule is proper, the expected score $E[\ell(Y,q)]$ is uniquely minimized at $q=p.$ Therefore,**
+
+$E[\ell(Y,p)] < E[\ell(Y,q)]$
+
+**whenever $q \ne p.$**
+
+**Therefore, for each prediction, Alice has lower expected loss than Babur.**
+
+**Since the outcomes $Y_1, Y_2, \dots$ are independent of each other., in the long run each person’s average score converges to their expected score. Thus Alice’s long-run average score converges to $E[\ell(Y,p)],$ while Babur’s converges to $E[\ell(Y,q)].$**
+
+**Since $E[\ell(Y,p)] < E[\ell(Y,q)],$ Alice will have the lower (better) score in the long run.**
+
+## part e
+
+**By definition, a proper scoring rule is one for which the expected loss $E[\ell(Y,q)]$ is uniquely minimized when the expectation of the score is minimized at $q=p.$**
+
+**Therefore, if Babur is evaluated using a proper scoring rule, his expected score is smallest when he reports $q=p,$ which means he minimizes his expected loss by honestly reporting his true belief.**
+
+## part f
+
+**If a forecaster is well calibrated, then among all cases where they predict $q$, the true conditional probability is $q$. In that situation, a proper scoring rule is minimized by reporting $q$, because proper scoring rules are minimized when the reported probability equals the true probability. Thus, for a calibrated forecaster, honestly reporting their forecast is optimal under a proper scoring rule.**
+
+**Keeping this in mind, proper scoring rules encourage people to state probabilities that match their real beliefs, and calibration checks whether those stated probabilities actually line up with reality. Therefore, calibration is about the accuracy of the probabilities themselves, while proper scoring rules are a way of evaluating the probabilistic accuracy. A forecaster who is badly calibrated will tend to get a worse scores under a proper scoring rule than one whose probabilities match observed frequencies better.**
+
+# Question 4
+
+## part a 
+
+**We have $f = \frac{1}{n}\sum_{i=1}^n Y_i$ and $\bar p = \frac{1}{n}\sum_{i=1}^n p_i.$**
+
+**By linearity of expectation,**
+
+$E[f] = E\left(\frac{1}{n}\sum_{i=1}^n Y_i\right) = \frac{1}{n}\sum_{i=1}^n E[Y_i].$
+
+**Since each $Y_i$ is Bernoulli with $P(Y_i=1)=p_i,$ we have $E[Y_i]=p_i.$**
+
+**Therefore,**
+
+$E[f] = \frac{1}{n}\sum_{i=1}^n p_i = \bar p.$
+
+## part b
+
+**Since $f = \frac{1}{n}\sum_{i=1}^n Y_i,$**
+
+**we have**
+$\mathrm{Var}[f]$
+
+$= \mathrm{Var}\left(\frac{1}{n}\sum_{i=1}^n Y_i\right)$
+
+$= \frac{1}{n^2}\mathrm{Var}\left(\sum_{i=1}^n Y_i\right).$
+
+**Since the $Y_i$ are independent,**
+
+$\mathrm{Var}\left(\sum_{i=1}^n Y_i\right)$
+
+$= \sum_{i=1}^n \mathrm{Var}(Y_i).$
+
+**Thus,**
+
+$\mathrm{Var}[f]= \frac{1}{n^2}\sum_{i=1}^n \mathrm{Var}(Y_i).$
+
+**Since each $Y_i$ is Bernoulli with $P(Y_i=1)=p_i,$**
+
+$\mathrm{Var}(Y_i)=p_i(1-p_i).$
+
+**Therefore,**
+
+$\mathrm{Var}[f] = \frac{1}{n^2}\sum_{i=1}^n p_i(1-p_i).$
+
+## part c
+
+**For large $n,$ the Central Limit Theorem implies that $f = \frac{1}{n}\sum_{i=1}^n Y_i$is approximately normally distributed.**
+
+**From part (a), we know that:**
+
+$E[f]=\bar p,$
+
+**and from part (b), we know that**
+
+$\mathrm{Var}(f) = \frac{1}{n^2}\sum_{i=1}^n p_i(1-p_i)$
+
+**Therefore, using the central limit theorm with large n we have:**
+
+$f \approx N(\bar p,\mathrm{Var}(f)).$
+
+**Therefore, the standardized variable**
+
+$\frac{f-\bar p}{\sqrt{\mathrm{Var}(f)}}$
+
+**is approximately standard normal.**
+
+**If $Z \sim N(0,1),$ then $P(-2 \le Z \le 2) \approx 0.95.$**
+
+**Therefore,**
+
+$P\left(-2 \le \frac{f-\bar p}{\sqrt{\mathrm{Var}(f)}} \le 2\right) \approx 0.95.$
+
+**Multiplying through by $\sqrt{\mathrm{Var}(f)},$ we get**
+
+$P\left(-2\sqrt{\mathrm{Var}(f)} \le f-\bar p \le 2\sqrt{\mathrm{Var}(f)}\right) \approx 0.95.$
+
+**Adding $\bar p$ throughout gives**
+
+$P\left(\bar p - 2\sqrt{\mathrm{Var}(f)} \le f \le \bar p + 2\sqrt{\mathrm{Var}(f)}\right) \approx 0.95.$
+
+## part d
+
+**In this part we consider only the subset of events where $q(x_i) \in [p_i,\bar p_i].$**
+
+**By restricting the data only onto this subset, we group together events with similar predicted probabilities. We can then compare the observed fraction of 1's within this subset to the average predicted probability for that subset.**
+
+**This improves the accuracy of the probability assessment because the global check from part (d) averages over all observations. Large prediction errors in different directions can cancel out in the overall average $\bar p,$ making the predictions appear accurate even if they are poorly calibrated.When we split the data into subsets with similar predicted probabilities, we check calibration locally rather than globally. If the model is well calibrated, the observed frequency of events within each subset should be close to the predicted probabilities for that subset.Thus, splitting the data in this way gives a more informative test of calibration than the overall check in part (d).**
+
+# Question 5
+
+## part a 
+
+**It is important to evaluate predictions only on the testing set because the training set is used to fit the model. If we evaluate the model on the same data used to train it, the model may appear overly accurate because it has already seen those observations and may have overfit them. The testing set consists of data that was not used when fitting the model, so evaluating predictions on it provides a more realistic measure of how well the model will perform on new data.**
+
+## part b
+
+**It is important to randomly divide the data into training and testing sets so that both sets are representative of the overall dataset. If the split were not random, the training and testing sets might differ systematically. For example, one set might contain mostly high-risk individuals while the other contains mostly low-risk individuals. This would lead to misleading estimates of model performance. Random splitting helps ensure that both sets have similar distributions of the variables and outcomes, making the evaluation more reliable.**
+
+## part c
+
+```{r,echo=FALSE}
+library(knitr)
+data <- read.csv("compas_violence.csv")
+testing_rows <- scan("testing_set.txt")
+testing_data <- data[testing_rows, ]
+prop_violent <- mean(testing_data$two_year_recid)
+kable(data.frame(Proportion_Rearrested_for_Violence = prop_violent))
+```
+
+
+# Question 6
+
+## part a 
+
+```{r,echo=FALSE}
+## helper functions from the notes(chapter 7 and 8)
+
+rboot <- function(statistic, simulator, B) {
+  tboots <- replicate(B, statistic(simulator()))
+  if (is.null(dim(tboots))) {
+    tboots <- array(tboots, dim = c(1, B))
+  }
+  return(tboots)
+}
+
+bootstrap <- function(tboots, summarizer, ...) {
+  summaries <- apply(tboots, 1, summarizer, ...)
+  return(t(summaries))
+}
+
+equitails <- function(x, alpha) {
+  lower <- quantile(x, alpha/2)
+  upper <- quantile(x, 1 - alpha/2)
+  return(c(lower, upper))
+}
+
+bootstrap.ci <- function(statistic = NULL, simulator = NULL, tboots = NULL,
+                         B = if (!is.null(tboots)) { ncol(tboots) },
+                         t.hat, level) {
+  if (is.null(tboots)) {
+    stopifnot(!is.null(statistic))
+    stopifnot(!is.null(simulator))
+    stopifnot(!is.null(B))
+    tboots <- rboot(statistic, simulator, B)
+  }
+  alpha <- 1 - level
+  intervals <- bootstrap(tboots, summarizer = equitails, alpha = alpha)
+  upper <- t.hat + (t.hat - intervals[, 1])
+  lower <- t.hat + (t.hat - intervals[, 2])
+  CIs <- cbind(lower = lower, upper = upper)
+  return(CIs)
+}
+
+resample <- function(x) {
+  sample(x, size = length(x), replace = TRUE)
+}
+
+resample.data.frame <- function(data) {
+  sample.rows <- resample(1:nrow(data))
+  return(data[sample.rows, ])
+}
+
+```
+
+```{r,echo=FALSE}
+train_rows <- setdiff(1:nrow(data), testing_rows)
+train_data <- data[train_rows, ]
+fit.logr <- glm(two_year_recid ~ age + priors_count,
+                data = train_data,
+                family = binomial)
+est.logr <- function(data) {
+  fit <- glm(two_year_recid ~ age + priors_count,
+             data = data,
+             family = binomial)
+  return(coef(fit))
+}
+
+resample.train <- function() {
+  resample.data.frame(train_data)
+}
+
+logr.ci <- bootstrap.ci(
+  statistic = est.logr,
+  simulator = resample.train,
+  t.hat = coef(fit.logr),
+  level = 0.95,
+  B = 1000
+)
+
+coef.table <- data.frame(
+  Term = names(coef(fit.logr)),
+  Estimate = as.numeric(coef(fit.logr)),
+  CI.lower = logr.ci[, "lower"],
+  CI.upper = logr.ci[, "upper"]
+)
+
+kable(coef.table, digits = 4)
+
+```
+
+
+## part b
+
+**The logistic regression model predicts the log-odds of recidivism within two years as a function of age and the number of prior arrests. The coefficient for age is -0.0609, meaning that for each additional year of age, the log-odds of recidivism decrease by about 0.061, holding the number of prior arrests fixed. The 95% bootstrap confidence interval for this coefficient is (-0.0718, -0.0485), which does not include zero, indicating that age is significantly associated with recidivism.**
+
+**The coefficient for priors_count is 0.1640, meaning that each additional prior arrest increases the log-odds of recidivism by about 0.164, holding age fixed. The 95% bootstrap confidence interval is (0.1390, 0.1864), which also does not include zero, indicating a strong positive association between prior arrests and recidivism.**
+
+**The intercept represents the baseline log-odds when both age and priors_count are zero, though this situation is not meaningful in practice since it is not realistically possible.**
+
+## part c
+
+```{r,echo=FALSE}
+first4 <-data.frame(age=c(19,22,34,42),sex =c("M","F","M","F"), priors_count = c(1,2,0,12), race = c("Caucasion","Caucasion","African-American","Hispanic"),v_degree = c("f","m","m","f"))
+
+pred.first4 <- function(data) {
+  fit <- glm(two_year_recid ~ age + priors_count,
+             data = data,
+             family = binomial)
+  return(as.numeric(predict(fit, newdata = first4, type = "response")))
+}
+
+p.hat <- as.numeric(predict(fit.logr, newdata = first4, type = "response"))
+
+pred.boot <- rboot(
+  statistic = pred.first4,
+  simulator = resample.train,
+  B = 1000
+)
+
+pred.ci <- bootstrap.ci(
+  tboots = pred.boot,
+  t.hat = p.hat,
+  level = 0.95
+)
+
+pred.table <- data.frame(
+  Arrestee = 1:4,
+  Predicted.Probability = p.hat,
+  CI.lower = pred.ci[, "lower"],
+  CI.upper = pred.ci[, "upper"]
+)
+
+kable(pred.table, digits = 4)
+```
+
+
+# Question 7
+
+## part a 
+```{r,echo=FALSE}
+training_data <- data[train_rows, ]
+testing_data <- data[testing_rows, ]
+log_model <- glm(two_year_recid ~ age + priors_count,
+                 data = training_data,
+                 family = binomial)
+test_prob <- predict(log_model,
+                        newdata = testing_data,
+                        type = "response")
+
+test_y <- testing_data$two_year_recid
+
+##Helper functions: 
+
+#converting the predicted probabilities into class predictions at threshold.
+predict_at_threshold <- function(probs, threshold) {
+  as.integer(probs >= threshold)
+}
+
+#calculating the misclassification rate
+misclassification_rate <- function(y_hat, y) {
+  mean(y_hat != y)
+}
+#calculating the false positive rate
+false_positive_rate <- function(y_hat, y) {
+  sum((y_hat == 1) & (y == 0)) / sum(y == 0)
+}
+#calculating the false negative rate
+false_negative_rate <- function(y_hat, y) {
+  sum((y_hat == 0) & (y == 1)) / sum(y == 1)
+}
+##Threshold:
+thresholds <- seq(0, 1, by = 0.01)
+
+```
+
+```{r,echo=FALSE}
+library(ggplot2)
+constant_classifier_error <- min(mean(test_y == 1), mean(test_y == 0))
+misclassification_values <- sapply(thresholds, function(t) {
+  yhat <- predict_at_threshold(test_prob, t)
+  misclassification_rate(yhat, test_y)
+})
+ggplot(data.frame(threshold = thresholds,
+                  misclassification = misclassification_values),
+       aes(x = threshold, y = misclassification)) +
+  geom_line() +
+  geom_hline(yintercept = constant_classifier_error, linetype = "dashed") +
+  labs(x = "Threshold t",
+       y = "Mis-classification rate")
+
+```
+**The miscalssification is minimized at threshold 0.52 0.62 0.67 0.68 0.69.**
+
+
+## part b
+
+```{r,echo=FALSE}
+fpr_values <- sapply(thresholds, function(t) {
+  yhat <- predict_at_threshold(test_prob, t)
+  false_positive_rate(yhat, test_y)
+})
+
+ggplot(data.frame(threshold = thresholds,
+                  FPR = fpr_values),
+       aes(x = threshold, y = FPR)) +
+  geom_line() +
+  geom_hline(yintercept = constant_classifier_error, linetype = "dashed") +
+  labs(x = "Threshold t",
+       y = "False positive rate")
+#thresholds[fpr_values == min(fpr_values)]
+
+
+```
+**The threshold where FPr is minimized are when it is greater or equal to 0.84**
+
+
+## part c
+
+```{r,echo=FALSE}
+fnr_values <- sapply(thresholds, function(t) {
+  yhat <- predict_at_threshold(test_prob, t)
+  false_negative_rate(yhat, test_y)
+})
+
+ggplot(data.frame(threshold = thresholds, FNR = fnr_values),
+       aes(x = threshold, y = FNR)) +
+  geom_line() +
+  geom_hline(yintercept = constant_classifier_error, linetype = "dashed") +
+  labs(x = "Threshold t",
+       y = "False negative rate")
+#thresholds[fnr_values == min(fnr_values)]
+```
+**The thresholds that minimize FNR it is smaller or equal to 0.02**
+
+
+## part d
+```{r,echo=FALSE}
+random_fpr <- seq(0, 1, by = 0.01)
+random_fnr <- 1 - random_fpr
+
+ggplot(data.frame(FPR = fpr_values, FNR = fnr_values),
+       aes(x = FPR, y = FNR)) +
+  geom_line() +
+  geom_line(data = data.frame(FPR = random_fpr, FNR = random_fnr),
+            aes(x = FPR, y = FNR),
+            linetype = "dashed") +
+  labs(x = "False positive rate",
+       y = "False negative rate")
+```
+
+**Yes the logistic regression adds predictive value over the random baseline since the curve of the false negative rate versus the the false positive rate lies below the dashed diagonal line(random classifier where FNR = 1-FPR). In the plot the logistic regression curve is consistently below the diagonal line  meaning that for the same FPR, the logistic model achieves a lower false negative rate than random guessing.**
+
+
+# Question 8
+
+## part a 
+
+```{r,echo=FALSE}
+library(mgcv)
+gam_model <- gam(two_year_recid ~ s(age) + s(priors_count),
+                 data = training_data,
+                 family = binomial)
+plot(gam_model, residuals = FALSE, pages = 1)
+```
+
+
+## part b
+
+**The partial response function for age shows a nonlinear relationship between age and the log-odds of recidivism after accounting for the number of prior arrests. The curve generally decreases as age increases, indicating that older individuals tend to have lower predicted risk of recidivism. There is a noticeable dip around the late 60s, suggesting a particularly strong decrease in predicted risk for that age range. With that being said there is a sudden increase at around the 80s showing a strong increase in predicted risk at late age. The partial response function for priors_count shows that the log-odds of recidivism increase as the number of prior arrests increases. The increase is steep at lower numbers of priors and then continues to rise more gradually at higher values. This indicates that individuals with more prior arrests have a higher predicted probability of recidivism, though the marginal effect becomes somewhat less steep as the number of priors grows.**
+
+## part c
+
+```{r,echo=FALSE}
+gam_pred_first4 <- predict(gam_model, newdata = first4, type = "response")
+
+# estimating the GAM predictions of the 4 arrestees and the input is the bootstrap resample of the training data and teh output is a vector of the predicted probabilities for the arrestees
+est.gam <- function(data) {
+  fit <- gam(two_year_recid ~ s(age) + s(priors_count),
+             data = data,
+             family = binomial)
+  predict(fit, newdata = first4, type = "response")
+}
+
+gam_boot <- rboot(statistic = est.gam,
+                  simulator = resample.train,
+                  B = 1000)
+gam_ci <- bootstrap.ci(tboots = gam_boot,
+                       t.hat = gam_pred_first4,
+                       level = 0.95)
+data.frame(
+  Arrestee = 1:4,
+  Predicted_Probability = gam_pred_first4,
+  CI.lower = gam_ci[, "lower"],
+  CI.upper = gam_ci[, "upper"]
+)
+```
+
+
+# Question 9
+
+## part a 
+```{r,echo=FALSE}
+gam_test_prob <- predict(gam_model, newdata = testing_data, type = "response")
+
+#predicting class given threshold
+predict_at_threshold <- function(prob, t) {
+  ifelse(prob >= t, 1, 0)
+}
+gam_misclassification <- sapply(thresholds, function(t) {
+  yhat <- predict_at_threshold(gam_test_prob, t)
+  misclassification_rate(yhat, test_y)
+})
+
+ggplot(data.frame(threshold=thresholds,
+                  misclass=gam_misclassification),
+       aes(x=threshold,y=misclass)) +
+  geom_line() +
+  geom_hline(yintercept = constant_classifier_error,
+             linetype="dashed") +
+  labs(x="Threshold t",
+       y="Mis-classification rate",
+       title="GAM Misclassification vs Threshold")
+#thresholds[gam_misclassification == min(gam_misclassification)]
+```
+**The misclassiciation rate of Gam is minimzed at 0.46**
+
+## part b
+
+```{r,echo=FALSE}
+gam_fpr <- sapply(thresholds, function(t){
+  yhat <- predict_at_threshold(gam_test_prob,t)
+  false_positive_rate(yhat,test_y)
+})
+
+gam_fnr <- sapply(thresholds, function(t){
+  yhat <- predict_at_threshold(gam_test_prob,t)
+  false_negative_rate(yhat,test_y)
+})
+
+ggplot(data.frame(FPR=gam_fpr,
+                  FNR=gam_fnr),
+       aes(x=FPR,y=FNR)) +
+  geom_line() +
+  geom_line(aes(x=seq(0,1,0.01),
+                y=1-seq(0,1,0.01)),
+            linetype="dashed") +
+  labs(x="False positive rate",
+       y="False negative rate",
+       title="GAM FNR vs FPR")
+```
+
+
+## part c
+
+**Compared to the logistic regression model from Q7, the GAM appears to perform very similarly: its curve has essentially the same overall shape and stays below the random-baseline diagonal by a similar amount. This suggests that the GAM does have predictive value, but it does not seem to provide a dramatic improvement over the logistic regression. So the nonlinear flexibility of the GAM helps capture structure in the predictors, but in terms of classification performance, it looks only modestly different from the logistic model.**
+
+# Question 10
+
+## part a 
+
+```{r,echo=FALSE}
+compas_thresholds <- 1:11
+predict_from_score <- function(score, t) {
+  as.integer(score >= t)
+}
+compas_misclassification <- sapply(compas_thresholds, function(t) {
+  yhat <- predict_from_score(testing_data$v_score, t)
+  misclassification_rate(yhat, test_y)
+})
+
+ggplot(data.frame(threshold = compas_thresholds,
+                  misclassification = compas_misclassification),
+       aes(x = threshold, y = misclassification)) +
+  geom_line() +
+  geom_point() +
+  geom_hline(yintercept = constant_classifier_error, linetype = "dashed") +
+  labs(x = "Threshold t",
+       y = "Mis-classification rate",
+       title = "COMPAS Mis-classification Rate vs Threshold")
+
+#compas_thresholds[compas_misclassification == min(compas_misclassification)]
+```
+**The COMPAS score only takes values from 1 to 10. If we classified using thresholds only up to 10, then there would be no threshold that predicts everyone as 0. Including $t=11$ creates the case where no score is at least the threshold, so $\hat{Y}=0$ for everyone. This is needed to include the full range of possible classifications, from predicting everyone as 1 at $t=1$ to predicting everyone as 0 at $t=11$.**
+
+## part b
+
+```{r,echo=FALSE}
+compas_fpr <- sapply(compas_thresholds, function(t) {
+  yhat <- predict_from_score(testing_data$v_score, t)
+  false_positive_rate(yhat, test_y)
+})
+
+compas_fnr <- sapply(compas_thresholds, function(t) {
+  yhat <- predict_from_score(testing_data$v_score, t)
+  false_negative_rate(yhat, test_y)
+})
+ggplot(data.frame(FPR = compas_fpr, FNR = compas_fnr),
+       aes(x = FPR, y = FNR)) +
+  geom_line() +
+  geom_point() +
+  geom_line(data = data.frame(FPR = seq(0, 1, by = 0.01),
+                              FNR = 1 - seq(0, 1, by = 0.01)),
+            aes(x = FPR, y = FNR),
+            linetype = "dashed") +
+  labs(x = "False positive rate",
+       y = "False negative rate",
+       title = "COMPAS FNR vs FPR")
+```
+
+
+## part c
+
+**The COMPAS score performs better than the random baseline because its FNR vs FPR curve lies below the dashed diagonal line for most of the range of false positive rates. The diagonal represents a classifier that makes random predictions, where FNR=1-FPR. Since the COMPAS curve is generally below this line, it achieves a lower false negative rate than random guessing for the same false positive rate. However, compared with the logistic regression and GAM models from earlier questions, the COMPAS classifier appears less smooth and may perform worse in some regions of the plot. This suggests that while the COMPAS score contains useful predictive information, the statistical models built earlier may capture the relationship between the predictors and recidivism more effectively in some cases.**
+
+# Question 11
+
+## part a 
+```{r,echo=FALSE}
+#grouping predicted probabilities into bins and compare average predicted probability to observed frequency within each bin where the inputs are the lower and upper end of the probability bin, the predicted probabilities, and teh observed 0,1 outcomes and the output is a vector with observed frequency and average predicted proababilty, standard error, and number of observations in the bin
+
+frequency_vs_probability <- function(p.lower, p.upper = p.lower + 0.05,
+                                     probs, events) {
+  indices <- (probs >= p.lower) & (probs < p.upper)
+
+  if (sum(indices) == 0) {
+    return(c(frequency = NA, ave.prob = NA, se = NA))
+  }
+  matching.probs <- probs[indices]
+  frequency <- mean(events[indices])
+  ave.prob <- mean(matching.probs)
+  total.var <- mean(matching.probs * (1 - matching.probs)) + var(matching.probs)
+  se <- sqrt(total.var / sum(indices))
+  return(c(frequency = frequency, ave.prob = ave.prob, se = se))
+}
+#computes the log probability loss with inputs of probability the observed 0,1 outcomes and teh outputs the mean log probability loss
+mean_log_loss <- function(probs, y) {
+  probs <- pmin(pmax(probs, 1e-12), 1 - 1e-12)
+  mean(-(y * log(probs) + (1 - y) * log(1 - probs)))
+}
+test_y <- testing_data$two_year_recid
+
+logistic_test_prob <- predict(log_model,
+                              newdata = testing_data,
+                              type = "response")
+
+gam_test_prob <- predict(gam_model,
+                         newdata = testing_data,
+                         type = "response")
+prob_bins <- seq(from = 0, to = 0.95, by = 0.05)
+```
+
+
+```{r,echo=FALSE,warning=FALSE}
+test_y <- testing_data$two_year_recid
+
+logistic_test_prob <- predict(log_model,
+                              newdata = testing_data,
+                              type = "response")
+
+bins <- seq(from = 0, to = 0.95, by = 0.05)
+
+logistic_cal <- sapply(bins, frequency_vs_probability,
+                       p.upper = bins + 0.05,
+                       probs = logistic_test_prob,
+                       events = test_y)
+
+logistic_cal <- data.frame(
+  frequency = logistic_cal["frequency", ],
+  ave.prob  = logistic_cal["ave.prob", ],
+  se        = logistic_cal["se", ]
+)
+
+logistic_cal <- na.omit(logistic_cal)
+
+par(pty = "s")
+plot(logistic_cal$ave.prob, logistic_cal$frequency,
+     xlim = c(0, 1), ylim = c(0, 1),
+     xlab = "Predicted probabilities",
+     ylab = "Observed frequencies",
+     main = "Calibration Plot: Logistic Regression")
+abline(0, 1, col = "grey")
+segments(x0 = logistic_cal$ave.prob,
+         y0 = logistic_cal$frequency - 1.96 * logistic_cal$se,
+         x1 = logistic_cal$ave.prob,
+         y1 = logistic_cal$frequency + 1.96 * logistic_cal$se)
+gam_test_prob <- predict(gam_model,
+                         newdata = testing_data,
+                         type = "response")
+
+gam_cal <- sapply(bins, frequency_vs_probability,
+                  p.upper = bins + 0.05,
+                  probs = gam_test_prob,
+                  events = test_y)
+
+gam_cal <- data.frame(
+  frequency = gam_cal["frequency", ],
+  ave.prob  = gam_cal["ave.prob", ],
+  se        = gam_cal["se", ]
+)
+
+gam_cal <- na.omit(gam_cal)
+
+par(pty = "s")
+plot(gam_cal$ave.prob, gam_cal$frequency,
+     xlim = c(0, 1), ylim = c(0, 1),
+     xlab = "Predicted probabilities",
+     ylab = "Observed frequencies",
+     main = "Calibration Plot: GAM")
+abline(0, 1, col = "grey")
+segments(x0 = gam_cal$ave.prob,
+         y0 = gam_cal$frequency - 1.96 * gam_cal$se,
+         x1 = gam_cal$ave.prob,
+         y1 = gam_cal$frequency + 1.96 * gam_cal$se)
+```
+
+
+
+## part b
+
+**Based on these plots GAM appears somewhat better calibrated than the logistic regression since its calibration points tend to be closer to the 45 degree line than those of logixtic regression. In the logistic regression plot the points at higher predicted probabilities deviate more from the diagonal and have wider error bars sugesting that the predicted probabilites are less closely alignted with the observed frequencies in that range. Inm the GAM plot the points generally track the diagonl more closely over most the range although there is still noticeable uncertainty at higher probability bins. **
+
+## part c
+
+```{r,echo=FALSE}
+test_y <- testing_data$two_year_recid
+logistic_prob <- predict(log_model,
+                         newdata = testing_data,
+                         type = "response")
+gam_prob <- predict(gam_model,
+                    newdata = testing_data,
+                    type = "response")
+
+logistic_mse <- mean((test_y - logistic_prob)^2)
+gam_mse <- mean((test_y - gam_prob)^2)
+
+logistic_logloss <- mean(-(test_y*log(logistic_prob) +
+                           (1-test_y)*log(1-logistic_prob)))
+
+gam_logloss <- mean(-(test_y*log(gam_prob) +
+                      (1-test_y)*log(1-gam_prob)))
+
+# Table
+metrics <- data.frame(
+  Model = c("Logistic Regression", "GAM"),
+  MSE = c(logistic_mse, gam_mse),
+  Log_Probability_Loss = c(logistic_logloss, gam_logloss)
+)
+
+kable(metrics, digits = 4)
+```
+**The GAM has mean squared error 0.1099 and mean log probability loss 0.3701, while the logistic regression has mean squared error 0.1130 and mean log probability loss 0.3755 on the testing set. From Question 3, both squared error loss and log probability loss are proper scoring rules, meaning they are minimized when predicted probabilities match the true probabilities. Therefore, smaller values of these metrics indicate better calibrated probability predictions. Since the GAM has smaller values for both metrics, it is better calibrated than the logistic regression according to these measures.**
+
+
+## part d
+
+```{r,echo=FALSE}
+scores <- sort(unique(testing_data$v_score))
+
+freq <- sapply(scores, function(s){
+  mean(test_y[testing_data$v_score == s])
+})
+
+n <- sapply(scores, function(s){
+  sum(testing_data$v_score == s)
+})
+
+se <- sqrt(freq * (1 - freq) / n)
+compas_freq <- data.frame(
+  score = scores,
+  frequency = freq,
+  se = se
+)
+```
+
+```{r,echo=FALSE}
+par(pty="s")
+
+plot(compas_freq$score,
+     compas_freq$frequency,
+     xlab="COMPAS Score",
+     ylab="Recidivism Frequency",
+     main="Recidivism Frequency vs COMPAS Score",
+     pch=16)
+
+segments(x0 = compas_freq$score,
+         y0 = compas_freq$frequency - 2*compas_freq$se,
+         x1 = compas_freq$score,
+         y1 = compas_freq$frequency + 2*compas_freq$se)
+```
+**For each COMPAS score level the observed recidivism frequency is the sample proportion of individuals with that score who were rearrested for violence. If the true probability of recidivism for that score is p then the number of recidivism events among n individuals should follow a binoimial distribution and therefore we calculate them accordingly. Since the true p is unknown we estimate it using the observed frequency.**
+
+## part e
+
+**If the compas score is working as intended, it should be monotonically increasing since higher compas scores are supposed to indicate higher predicted risk of violent recivdivism and therefore individuals with higher scores should on average have higher observed recidivism rates than those with lower scores. Therefore, individuals with higher scores should on average have higher observed recidivism rates than those with lower scores.**
+
+## part f
+
+**The COMPAS plot is not a calibration plot in the same sense as the previous ones because the COMPAS score is not a predicted probability. Calibration plots compare predicted probabilities with observed frequencies to see whether predicted probabilities match actual outcomes. In contrast, the COMPAS score is an ordinal risk score from 1 to 10 that only ranks individuals by risk and does not directly represent a probability of recidivism. Therefore, plotting recidivism frequency versus the COMPAS score shows whether higher scores correspond to higher risk, but it does not test whether predicted probabilities are correctly calibrated.**
+
+
+# Question 12
+
+**I would recommend the GAM. Compared with the logistic regression, the GAM had lower mean squared error and lower log probability loss on the testing set, indicating better calibrated probability predictions. The calibration plots also suggested that the GAM’s predicted probabilities tracked the observed recidivism frequencies more closely than those of the logistic regression. In addition, the GAM allows for nonlinear relationships between predictors and recidivism risk, which is visible in the partial response functions and likely reflects the true relationships in the data more accurately than a strictly linear logistic model. Compared with COMPAS, the statistical models provide explicit probability estimates and clearer interpret ability, while COMPAS is only an ordinal risk score.**
+
+# Qeustion 13
+
+**Approximately 13 hours**
+
+
+# Extra Credit 1
+
+## part a 
+
+We first define
+$R = \frac{Y-\mu(X)}{\sqrt{\mu(X)(1-\mu(X))}},$
+where
+
+$\mu(x) = \mathbb{E}[Y \mid X=x].$
+
+Because $Y$ is binary,
+
+$\mathbb{E}[Y \mid X=x] = \mu(x)$
+and
+
+$\mathrm{Var}(Y \mid X=x) = \mu(x)(1-\mu(x)).$
+
+First, compute the conditional mean:
+$$
+\mathbb{E}[R \mid X=x]
+=
+\mathbb{E}\left[
+\left.
+\frac{Y-\mu(X)}{\sqrt{\mu(X)(1-\mu(X))}}
+\right| X=x
+\right].
+$$
+
+Conditioning on $X=x$ makes $\mu(X)$ into $\mu(x)$, so
+$\mathbb{E}[R \mid X=x]=\frac{\mathbb{E}[Y \mid X=x]-\mu(x)}{\sqrt{\mu(x)(1-\mu(x))}}.$
+
+Since $\mathbb{E}[Y \mid X=x]=\mu(x)$,
+
+$\mathbb{E}[R \mid X=x]=\frac{\mu(x)-\mu(x)}{\sqrt{\mu(x)(1-\mu(x))}}=0.$
+
+Now compute the conditional second moment:
+$$
+\mathbb{E}[R^2 \mid X=x]
+=
+\mathbb{E}\left[
+\left.
+\frac{(Y-\mu(X))^2}{\mu(X)(1-\mu(X))}
+\right| X=x
+\right].
+$$
+
+Again conditioning on $X=x$,
+$\mathbb{E}[R^2 \mid X=x]=\frac{\mathbb{E}[(Y-\mu(x))^2 \mid X=x]}{\mu(x)(1-\mu(x))}.$
+
+But
+$$
+\mathbb{E}[(Y-\mu(x))^2 \mid X=x]
+=
+\mathrm{Var}(Y \mid X=x)
+=
+\mu(x)(1-\mu(x)),
+$$
+so
+$$
+\mathbb{E}[R^2 \mid X=x]
+=
+\frac{\mu(x)(1-\mu(x))}{\mu(x)(1-\mu(x))}
+=1.
+$$
+
+Therefore,
+$$
+\mathbb{E}[R \mid X=x]=0
+\qquad\text{and}\qquad
+\mathbb{E}[R^2 \mid X=x]=1
+\quad \text{for all } x.
+$$
+
+## part b
+
+If a model gives a predicted probability
+
+$\hat p(x) = \widehat{\mathbb{P}}(Y=1 \mid X=x),$
+then the standardized residual for observation $i$ is
+
+$r_i = \frac{y_i-\hat p_i}{\sqrt{\hat p_i(1-\hat p_i)}},$
+where
+
+$\hat p_i = \hat p(x_i).$
+
+If the model is correct, then $\hat p_i \approx \mu(x_i)$, so from part 1,
+$$
+\mathbb{E}[r_i \mid X=x_i] \approx 0
+$$
+and
+$$
+\mathbb{E}[r_i^2 \mid X=x_i] \approx 1.
+$$
+
+So if the model is correct, this residual should have conditional mean $0$ and conditional variance $1$.
+
+
+
+
+
+
+

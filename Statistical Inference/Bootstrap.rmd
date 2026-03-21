@@ -1,0 +1,631 @@
+
+---
+title: "36-402 Homework 4"
+subtitle: Due Tuesday, Feburary 12th by 5:59pm
+author: "Platt Yoon"
+output: pdf_document
+urlcolor: blue
+---
+
+
+# Problem 1:
+
+```{r,echo= False}
+library(knitr)
+df <- read.csv("nampd.csv")
+d <- subset(df, !is.na(ln_old_mass) & !is.na(ln_mass))
+fit <- lm(ln_mass ~ ln_old_mass, data = d)
+d$anc_g <- exp(d$ln_old_mass)
+d$new_g <- exp(d$ln_mass)
+coef_vec <- coef(fit)
+a <- coef(fit)[1]
+b <- coef(fit)[2]
+xgrid <- seq(min(d$anc_g), max(d$anc_g), length.out = 300)
+ygrid_lm <- exp(a) * xgrid^b
+
+plot(d$anc_g, d$new_g,
+     xlab = "Ancestral mass (grams)",
+     ylab = "New mass (grams)",
+     pch = 16, cex = 0.6)
+coef_df <- data.frame(
+  Parameter = c("Intercept", "Slope"),
+  Estimate = as.numeric(coef(fit))
+)
+legend("topleft",
+       legend = c("linear regression on logs"),
+       lwd = 2, bty = "n")
+
+knitr::kable(coef_df, digits = 4)
+```
+**The slope tells us that a 1 percent increase in ancestral mass is associated with 0.995 percent increase in new mass on average. Since the slope is close to 1 it means that descendant mass is almost proportional to ancestral mass with very weak regression toward the mean on the multiplicative scale. The intercept is 0.1411 when we exponent this($e^{0.1411} = 1.15$) we can interpret this as when the ancestral mass is 1gram($e^0 =1$), the predicted new mass is about 1.15 grams before noise.**
+
+# Problem 2: 
+
+```{r,echo=FALSE}
+fit_spline <- smooth.spline(d$ln_old_mass, d$ln_mass)
+pred_spline <- predict(fit_spline, x = log(xgrid))
+ygrid_spline <- exp(pred_spline$y)
+plot(d$anc_g, d$new_g,
+     xlab = "Ancestral mass (grams)",
+     ylab = "New mass (grams)",
+     pch = 16, cex = 0.6)
+
+lines(xgrid, ygrid_lm, lwd = 2, col = "blue")       
+lines(xgrid, ygrid_spline, lwd = 2, col = "red")   
+
+legend("topleft",
+       legend = c("linear on logs", "smoothing spline on logs"),
+       lwd = 2, bty = "n")
+
+```
+
+
+# Problem 3:
+```{r,echo=FALSE}
+#Directly from chapter 6 notes(code)
+resample.data.frame <- function(data) {
+  sample.rows <- resample(1:nrow(data))
+  return(data[sample.rows,])
+}
+equitails <- function(x, alpha) {
+  lower <- quantile(x, alpha/2)
+  upper <- quantile(x, 1-alpha/2)
+  return(c(lower, upper))
+}
+bootstrap.se <- function(statistic, simulator, B) {
+    bootstrap(rboot(statistic, simulator, B), summarizer=sd)
+}
+
+rboot <- function(statistic, simulator, B) {
+  tboots <- replicate(B, statistic(simulator()))
+  if(is.null(dim(tboots))) {
+      tboots <- array(tboots, dim=c(1, B))
+  }
+  return(tboots)
+}
+resample <- function(x) { sample(x,size=length(x),replace=TRUE) }
+
+bootstrap.ci <- function(statistic=NULL, simulator=NULL, tboots=NULL,
+                         B=if(!is.null(tboots)) { ncol(tboots) },
+                         t.hat, level) {
+  if (is.null(tboots)) {
+    stopifnot(!is.null(statistic))
+    stopifnot(!is.null(simulator))
+    stopifnot(!is.null(B))
+    tboots <- rboot(statistic, simulator, B)
+  }
+  alpha <- 1-levelintervals <- bootstrap(tboots, summarizer=equitails, alpha=alpha)
+  upper <- t.hat + (t.hat - intervals[,1])
+  lower <- t.hat + (t.hat - intervals[,2])
+  CIs <- cbind(lower=lower, upper=upper)
+  return(CIs)
+}
+bootstrap <- function(tboots, summarizer, ...) {
+  summaries <- apply(tboots, 1, summarizer, ...)
+  return(t(summaries))
+}
+
+B <- 800   
+xgrid_ln <- log(xgrid)
+main.curve <- predict(fit_spline, xgrid_ln)$y
+resample.residuals.mass <- function() {
+  new.frame <- d
+  fitted_vals <- predict(fit_spline, d$ln_old_mass)$y
+  new.frame$ln_mass <- fitted_vals + resample(d$ln_mass - fitted_vals)
+  return(new.frame)
+}
+
+resample.cases.mass <- function() { resample.data.frame(d) }
+spline.curve <- function(data) {
+  mdl <- smooth.spline(x=data$ln_old_mass, y=data$ln_mass)
+  return(predict(mdl, xgrid_ln)$y)
+}
+
+#(a)
+boot.curves.resid <- rboot(statistic=spline.curve,
+simulator=resample.residuals.mass,B=B)
+
+ci.resid.95 <- bootstrap.ci(tboots=boot.curves.resid,
+t.hat=main.curve, level=0.95)
+#(b) 
+se.resid <- bootstrap.se(statistic=spline.curve,
+simulator=resample.residuals.mass, B=B)
+se.resid <- as.numeric(se.resid) 
+lower.resid.se <- main.curve - 2*se.resid
+upper.resid.se <- main.curve + 2*se.resid
+
+#(c) 
+boot.curves.case <- rboot(statistic=spline.curve,
+simulator=resample.cases.mass, B=B)
+
+ci.case.95 <- bootstrap.ci(tboots=boot.curves.case,
+t.hat=main.curve,level=0.95)
+
+#(d)
+se.case <- bootstrap.se(statistic=spline.curve,
+simulator=resample.cases.mass,B=B)
+
+se.case <- as.numeric(se.case)
+lower.case.se <- main.curve - 2*se.case
+upper.case.se <- main.curve + 2*se.case
+
+plot(exp(d$ln_old_mass), exp(d$ln_mass),
+     main = "Question 3 (a)-(d)",
+     xlab="Ancestral mass (grams)",
+     ylab="New mass (grams)",
+     pch=16, cex=0.6)
+#Q2
+lines(xgrid, exp(main.curve), lwd=2)
+
+#(a)
+lines(xgrid, exp(ci.resid.95[,"lower"]), lwd=2, col="blue")
+lines(xgrid, exp(ci.resid.95[,"upper"]), lwd=2, col="blue")
+
+#(b)
+lines(xgrid, exp(lower.resid.se), lwd=2, col="red")
+lines(xgrid, exp(upper.resid.se), lwd=2, col="red")
+
+#(c)
+lines(xgrid, exp(ci.case.95[,"lower"]), lwd=2,col="green")
+lines(xgrid, exp(ci.case.95[,"upper"]), lwd=2,col="green")
+
+#(d)
+lines(xgrid, exp(lower.case.se), lwd=2,col="yellow")
+lines(xgrid, exp(upper.case.se), lwd=2,col="yellow")
+
+legend("topleft",legend = c("Spline regression",
+                            "Residual 95% CI",
+                            "Residual ±2 SE",
+                            "Case 95% CI",
+                            "Case ±2 SE"),
+       lwd = 2,
+       col = c("black","blue", "red", "green", "yellow"),
+       bty = "n")
+
+
+```
+
+
+## PART A
+
+
+## PART B
+
+## PART C
+
+## PART D
+
+## PART E
+**For the resampling of residuals, the $95%$ confidence bands are almost identical to the ±2 standard error bands, in which there are slight deviation at more spare-data regions. On the other hand, the resampling cases method produced different $95%$ confidence bands and ±2 standard error bands.In both cases neither should necessarily match since the ±2 standard error bands are a normal-approximation and assumes that each grid point is roughly normally distributed, while the $95%$ confidence band is a bootstrap interval where bootstrap distribution for a spline can be skewed and non-symmetric.**
+
+# Problem 4:
+
+## Part A
+
+**rmass would need to have a total of 5 variables: Ancestral mass(in grams) X_A, Minimum allowed species mass(grams) xmin, maximum allowed species mass(grams) xmax, Regression function (estimated from question 2), and Variance($\sigma^2$)**
+
+## Part B
+
+```{r,echo=FALSE,results='hide'}
+xmin<-1.8
+xmax<-1e15
+rmass <- function(XA, r, sigma2=0.63, xmin=xmin, xmax=xmax) {
+  sigma <- sqrt(sigma2)
+  XD <- 0
+  while ((XD < xmin) || (XD > xmax)) {
+    mu <- predict(r, x = log(XA))$y     
+    Z <- rnorm(1, mean=0, sd=sigma)
+    XD <- exp(mu + Z)                  
+  }
+  return(XD)
+}
+
+XA_low  <- xmin * 1.01
+XA_high <- xmax / 1.01
+XD_low  <- replicate(B, rmass(XA=XA_low,  r=fit_spline, sigma2=sigma2, xmin=xmin, xmax=xmax))
+XD_high <- replicate(B, rmass(XA=XA_high, r=fit_spline, sigma2=sigma2, xmin=xmin, xmax=xmax))
+all((XD_low >= xmin) & (XD_low <= xmax))
+all((XD_high >= xmin) & (XD_high <= xmax))
+```
+**The output is always between xmin and xmax even when $X_A$ is brought near either limit**
+
+## PART C
+
+
+```{r,echo=FALSe}
+set.seed(1)
+
+XA <- exp(seq(log(xmin), log(xmax), length.out = 150))
+XD <- sapply(XA, function(x) rmass(XA=x, r=fit_spline, sigma2=sigma2, xmin=xmin, xmax=xmax))
+fit_spline_sim <- smooth.spline(x = log(XA), y = log(XD))
+
+orig_curve_ln <- main.curve
+sim_curve_ln  <- predict(fit_spline_sim, xgrid_ln)$y
+
+plot(exp(d$ln_old_mass), exp(d$ln_mass),
+     xlab="Ancestral mass (grams)",
+     ylab="New mass (grams)",
+     pch=16, cex=0.6)
+
+lines(xgrid, exp(orig_curve_ln), lwd=2)
+lines(xgrid, exp(sim_curve_ln),  lwd=2, lty=2)
+
+legend("topleft",
+       legend=c("Original regression curve", "Refit curve on simulated data"),
+       lwd=2, lty=c(1,2), bty="n")
+
+```
+**The original regression curve and the refit curve on simulated data are not identical. they shouldn't be identical since each $X_D$ includes new random noise, and rmass also rejects values outside of xmin and xmax, and therefore, the refit spline essentially is estimating the same underlying curve with additional noise with fairly few points(150)**
+
+# Problem 5:
+```{r,echo=FALSE}
+origin <- function(masses, r, sigma2=0.63, xmin=1.8, xmax=1e15) {
+  i <- sample(1:length(masses), size=1)      
+  XA <- masses[i]
+  d1 <- rmass(XA=XA, r=r, sigma2=sigma2, xmin=xmin, xmax=xmax)
+  d2 <- rmass(XA=XA, r=r, sigma2=sigma2, xmin=xmin, xmax=xmax)
+  masses[i] <- d1
+  return(c(masses, d2))
+}
+```
+
+
+## Part A
+```{r}
+set.seed(1)
+B <- 5000
+XA <- 120  
+out <- replicate(B, origin(masses=c(XA), r=fit_spline), simplify="matrix")
+d1 <- out[1, ]
+d2 <- out[2, ]
+
+matches_ancestor <- c(any(d1 == XA), any(d2 == XA))
+
+marginals <- data.frame(
+  Component = c("Descendant 1", "Descendant 2"),
+  Mean = c(mean(d1), mean(d2)),
+  SD   = c(sd(d1), sd(d2))
+)
+
+knitr::kable(data.frame(Any_Exact_Match_To_XA = matches_ancestor,
+                        row.names = c("Descendant 1", "Descendant 2")))
+knitr::kable(marginals)
+corr_val <- cor(d1, d2)
+knitr::kable(
+  data.frame(`Correlation between two descendants` = corr_val)
+)
+
+```
+**Neither descendant mass should equal the ancestral mass since the noise term is drawn from a continuous normal distribution and thus the probability that the noise term being exactly 0 is close to impossible.**
+
+
+## Part B
+
+```{r,echo=FALSE}
+set.seed(1)
+B <- 2000
+m_vals <- c(5, 20) 
+
+len_check <- sapply(m_vals, function(m) {
+  masses <- rep(120, m)  
+  out_lens <- replicate(B, length(origin(masses=masses, r=fit_spline)))
+  all(out_lens == m + 1)
+})
+
+knitr::kable(
+  data.frame(m = m_vals, `Is the result true` = as.logical(len_check))
+)
+
+```
+
+
+## Part C
+```{r,echo=FALSE}
+set.seed(1)
+
+check_match <- function(m) {
+  masses <- seq(10, by=10, length.out=m)  
+
+  results <- replicate(B, {
+    out <- origin(masses = masses, r = fit_spline)
+    sum(is.element(masses, out))
+  })
+  all(results == (m - 1))
+}
+match_check <- sapply(m_vals, check_match)
+tmp <- data.frame(m = m_vals, as.logical(match_check))
+colnames(tmp) <- c("m", "Do m-1 entries match input?")
+knitr::kable(tmp)
+
+```
+
+
+
+# Problem 6
+
+```{r,echo=FALSE}
+extinct.prob <- function(masses, rho, beta) {
+  return(beta * masses^rho)
+}
+```
+
+
+## Part A
+
+```{r,echo=FALSE}
+masses <- c(100, 1600, 10000)
+rho <- 1/2
+beta <- 1/200
+
+out <- extinct.prob(masses, rho=rho, beta=beta)
+expected <- beta * sqrt(masses)
+
+knitr::kable(
+  data.frame(
+    mass = masses,
+    output = out,
+    expected = expected,
+    difference = out - expected
+  )
+)
+
+```
+
+
+
+## Part B
+```{r,echo=FALSE}
+set.seed(1)
+masses <- c(1, 10, 100, 1000, 1e6)
+beta <- 1/200
+rho <- 0
+out <- extinct.prob(masses, rho=rho, beta=beta)
+knitr::kable(
+  data.frame(
+    mass = masses,
+    prob = out,
+    equals_beta = (out == beta)
+  )
+)
+```
+
+
+
+## PART C
+
+```{r,echo=FALSE}
+tests <- list(
+  list(mass=100,   rho=0.5,   beta=1/200),
+  list(mass=5000,  rho=0.025, beta=1/100),
+  list(mass=2e6,   rho=2,     beta=1/300)
+)
+
+equal_output_check <- sapply(tests, function(tst) {
+  masses <- rep(tst$mass, 5)
+  probs <- extinct.prob(masses, rho=tst$rho, beta=tst$beta)
+  length(unique(probs)) == 1
+})
+
+knitr::kable(
+  data.frame(
+    test = 1:length(tests),
+    mass = sapply(tests, function(tst) tst$mass),
+    rho  = sapply(tests, function(tst) tst$rho),
+    beta = sapply(tests, function(tst) tst$beta),
+    outputs_all_equal = as.logical(equal_output_check)
+  )
+)
+
+```
+
+
+## PART D
+
+```{r,echo=FALSE}
+masses <- c(100, 1600, 10000, 25000)
+rho <- 0.5
+beta <- 1/200
+
+probs <- extinct.prob(masses, rho=rho, beta=beta)
+
+all_distinct <- (length(unique(probs)) == length(probs))
+knitr::kable(
+  data.frame(`All probabilities distinct?` = all_distinct),
+  check.names = FALSE
+)
+
+```
+
+
+# Problem 7
+
+```{r,return=FALSE}
+extinction <- function(masses, rho, beta) {
+  n <- length(masses)
+  if (n == 0) return(masses)
+  p <- extinct.prob(masses, rho=rho, beta=beta)
+  extinct_flag <- rbinom(n, size=1, prob=p)
+  survivors <- masses[extinct_flag == 0]
+  return(survivors)
+}
+```
+
+
+## Part A
+```{r,echo=FALSe}
+set.seed(1)
+masses <- c(100, 500, 2000, 1e5)
+rho <- 0.5
+beta <- 0
+B <- 2000
+same_as_input <- replicate(B, identical(extinction(masses, rho=rho, beta=beta), masses))
+knitr::kable(
+  data.frame(`Output always equal to input?` = all(same_as_input))
+)
+
+```
+
+
+
+## Part B
+```{r,echo=FALSE}
+set.seed(1)
+m <- 1000
+x0 <- 100
+masses <- rep(x0, m)
+rho <- 0.5
+beta <- 0.5 / (x0^rho)   
+B <- 2000
+out_lengths <- replicate(B, length(extinction(masses, rho=rho, beta=beta)))
+
+knitr::kable(
+  data.frame(
+    input_length = m,
+    mean_output_length = mean(out_lengths),
+    expected_half = m/2
+  )
+)
+
+```
+
+
+
+## Part C
+
+```{r,echo=FALSE}
+set.seed(1)
+B <- 2000
+all_from_input <- replicate(B, {
+  out <- extinction(masses, rho=rho, beta=beta)
+  all(is.element(out, masses))
+})
+
+knitr::kable(
+  data.frame(`All survivors were in the input?` = all(all_from_input))
+)
+```
+
+
+
+# Problem 8:
+```{r,echo=FALSE}
+evolve_step <- function(masses, r, sigma2=0.63, xmin=1.8, xmax=1e15,
+                        rho=0.025, beta=1/5000) {
+  masses <- origin(masses, r=r, sigma2=sigma2, xmin=xmin, xmax=xmax)
+  masses <- extinction(masses, rho=rho, beta=beta)
+
+  return(masses)
+}
+```
+**The evolve_step() works since it is the composition of the function origin and extinction. From the previous problem, we already identified that origin performs correctly and increases the vector length by 1 while keeping masses within bounds. From questions 6 and 7 we know that the extinction probabilites are computed correctly and extinction removes species according to those probabilities without introducing new values.**
+
+# Problem 9:
+```{r,echo=FALSE}
+mass_evolve <- function(masses, r, T, sigma2=0.63, xmin=1.8, xmax=1e15,
+                        rho=0.025, beta=1/5000) {
+  for (t in 1:T) {
+    masses <- evolve_step(masses, r=r, sigma2=sigma2, xmin=xmin, xmax=xmax,
+                          rho=rho, beta=beta)
+  }
+  return(masses)
+}
+```
+**mass_evolve is a direct iterative extension of evolve_step where the function iterates exactly T  times and applies evolve_step repeatedly. From problem 8 we already verfied that evolve_step correctly performs one full model update while keeping invariant such as valid bounded mass. When T=0, the loop executes zero times and returns the original input vector unchanged and when T =1,, the output is identical to a single call in evolve_step() which shows that the loop structure behaves correctly. Therfore, since each iteration preserves mass bounds and model structure we can safely say that the function correctly runs.**
+
+# Problem 10:
+
+## PART A
+```{r,echo=FALSe}
+set.seed(1)
+masses.1 <- mass_evolve(masses=c(120), r=fit_spline, T=2e5)
+
+hist(log(masses.1), xlab="Mass (grams)", main="log of masses.1")
+
+```
+
+
+## PART B
+```{r,echo=FALSe}
+set.seed(2)
+masses.2 <- mass_evolve(masses=c(120), r=fit_spline, T=2e5)
+hist(log(masses.2), xlab="Mass (grams)", main="log(masses.2)")
+```
+
+## PART C
+```{r,echo=FALSe}
+set.seed(3)
+masses.3 <- mass_evolve(masses=c(120), r=fit_spline, T=4e5)
+hist(log(masses.3), xlab="Mass (grams)", main="log(masses.3)")
+```
+
+## PART D
+```{r,echo=FALSe}
+set.seed(4)
+masses.4 <- mass_evolve(masses=c(40, 1000), r=fit_spline, T=2e5)
+
+hist(log(masses.4), xlab="Mass (grams)", main="log(masses.4)")
+
+```
+
+
+```{r}
+set.seed(5)
+masses.5 <- mass_evolve(masses=c(40, 1000), r=fit_spline, T=2e5)
+hist(log(masses.5), xlab="Mass (grams)", main="log(masses.5)")
+
+```
+
+## PART E
+```{r,echo=FALSe}
+par(mfrow=c(2,2))
+qqplot(log(masses.1), log(masses.2),
+       xlab="log(masses.1)", ylab="log(masses.2)",
+       main="QQ: masses.1 vs masses.2"); abline(0,1)
+
+qqplot(log(masses.1), log(masses.3),
+       xlab="log(masses.1)", ylab="log(masses.3)",
+       main="QQ: masses.1 vs masses.3"); abline(0,1)
+
+qqplot(log(masses.4), log(masses.5),
+       xlab="log(masses.4)", ylab="log(masses.5)",
+       main="QQ: masses.4 vs masses.5"); abline(0,1)
+
+qqplot(log(masses.1), log(masses.4),
+       xlab="log(masses.1)", ylab="log(masses.4)",
+       main="QQ: masses.1 vs masses.4"); abline(0,1)
+
+par(mfrow=c(1,1))
+```
+
+# Problem 11:
+
+## PART A
+
+```{r,echo=FALSE}
+mom <- read.table("https://www.stat.cmu.edu/~cshalizi/uADA/26/hw/04/MoM.txt",
+                  header = TRUE)
+hist(log(mom$mass),
+     xlab = "log Mass (grams)",
+     main = "Histogram of log(Mammal Masses)")
+```
+
+
+## PART B
+
+## PART C
+
+# Problem 12:
+
+# Problem 13:
+
+**It took me approximatly 14 hours to complete**
+
+
+
+
+# Extra Credit
+
+
+
+
+
