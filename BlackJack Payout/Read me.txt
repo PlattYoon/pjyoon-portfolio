@@ -1,0 +1,33 @@
+﻿Blackjack EarlyPayout
+This project is a digital version of the popular card game, Blackjack, built with Python and CMU Graphics. It includes features such as side bets, multiple difficulty levels, chip management, and visually interactive gameplay. Early payout blackjack differs from normal blackjack because it allows the player to surrender regardless of how many hits you have taken and pays according to your probability of winning. For instance, you can only surrender in normal blackjack when receiving your cards. 
+Prerequisites: 
+Python Version: Ensure you have Python 3.9 or higher installed.
+
+
+Dependencies: Install the required libraries using pip
+* Os
+   * Import os
+* Cmu_graphics
+   * pip install cmu-graphics opencv-python
+   * Import cmu_graphics
+* Cv2
+   * pip install opencv-python
+      * import cv2 
+Since the app itself runs on CMU Graphics primarily, you should always initialize it using:   
+Game Flow: 
+* Introduction Video: Watch or skip the introduction by clicking the appropriate button.
+* Difficulty Selection: Choose your desired difficulty level (Easy, Medium, Hard).
+* Gameplay: 
+   * Place side bets on options like "Rummies", "Pairs", or "Triple 7s".
+   * Set your main bet amount using interactive chips.
+   * Play your hand with actions like "Hit", "Stand", or "Double Down".
+   * Watch the dealer's hand unfold and see if you win or lose!
+* Winner Announcement: The game announces the winner and resets for the next round.
+
+
+Shortcut Commands:
+Here are some helpful shortcuts to speed up testing and gameplay:
+* During the Side Bets phase, click the "Next" button to proceed to the Main Bet phase. This applies to the Main Bet Phase as well. If you press the “Next” button it transitions into the gameplay mode itself!
+* Simulation and Testing:
+   * Use the predefined EasyDeck, MediumDeck, and HardDeck classes to test different difficulties.
+   * Call startRound or determine winner directly for rapid gameplay outcomes.
