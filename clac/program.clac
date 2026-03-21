@@ -1,0 +1,14 @@
+// Sum of digits function
+// Usage: <number> sumDigits - computes sum of decimal digits
+
+: noop ;
+: dup 1 pick ;
+
+// Main sumDigits function
+: sumDigits dup 10 < if sumDigitsBase 4 skip sumDigitsRecurse ;
+
+// Base case: single digit numbers
+: sumDigitsBase ;
+
+// Recursive case: extract last digit and recurse on remaining digits
+: sumDigitsRecurse dup 10 % swap 10 / sumDigits + ;
