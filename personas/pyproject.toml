@@ -1,0 +1,31 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "ida-personas"
+version = "0.1.0"
+description = "IDA — native Jupyter AI personas for neurodivergent-student support (one per support mode)"
+requires-python = ">=3.9"
+dependencies = [
+    "jupyter-ai>=3.0.0",
+    "jupyter-ai-persona-manager>=0.0.11",
+]
+
+[project.optional-dependencies]
+# choose a model backend
+api = ["anthropic", "openai"]
+local = ["openai"]   # vLLM speaks the OpenAI wire format
+
+# This is what makes them REAL Jupyter AI personas: Jupyter AI discovers anything
+# registered under this entry-point group and makes it @-mentionable in chat.
+[project.entry-points."jupyter_ai.personas"]
+ida-unblock = "ida_personas.personas:UnblockPersona"
+ida-focus   = "ida_personas.personas:FocusPersona"
+ida-nearby  = "ida_personas.personas:NearbyPersona"
+ida-checkin = "ida_personas.personas:CheckinPersona"
+
+[tool.hatch.build.targets.wheel]
+packages = ["ida_personas"]
+# assets/ lives inside the package dir, so hatchling ships the SVGs automatically.
+# (A force-include here would re-add them and collide — see git history.)
